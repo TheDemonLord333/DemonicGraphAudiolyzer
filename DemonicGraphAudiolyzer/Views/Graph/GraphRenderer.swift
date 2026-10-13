@@ -245,7 +245,8 @@ enum GraphRenderer {
         var lastLabelMaxX = -CGFloat.infinity
         for value in xTicks.values where abs(value) > xTicks.step * 1e-6 || yAxisX < rect.minX + 1 || yAxisX > rect.maxX - 1 {
             let px = transform.x(value)
-            guard px > rect.minX + 12, px < rect.maxX - 12 else { continue }
+            // Keep clear of the axis tips and the axis name "x" at the right end.
+            guard px > rect.minX + 12, px < rect.maxX - 26 else { continue }
             ticks.move(to: CGPoint(x: px, y: xAxisY - 3))
             ticks.addLine(to: CGPoint(x: px, y: xAxisY + 3))
             let text = context.resolve(Text(NumberText.decimal(value, fractionDigits: xTicks.fractionDigits)).font(labelFont).foregroundStyle(appearance.label))
@@ -259,7 +260,8 @@ enum GraphRenderer {
         var lastLabelY = CGFloat.infinity
         for value in yTicks.values where abs(value) > yTicks.step * 1e-6 || xAxisY < rect.minY + 1 || xAxisY > rect.maxY - 1 {
             let py = transform.y(value)
-            guard py > rect.minY + 10, py < rect.maxY - 10 else { continue }
+            // Keep clear of the axis tips and the axis name "y" at the top.
+            guard py > rect.minY + 22, py < rect.maxY - 10 else { continue }
             ticks.move(to: CGPoint(x: yAxisX - 3, y: py))
             ticks.addLine(to: CGPoint(x: yAxisX + 3, y: py))
             guard lastLabelY - py > 14 else { continue }

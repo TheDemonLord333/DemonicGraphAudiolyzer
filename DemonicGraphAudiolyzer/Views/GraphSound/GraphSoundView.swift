@@ -91,6 +91,7 @@ struct GraphSoundView: View {
             }
             .padding(.horizontal, 12)
             .padding(.top, 4)
+            .padding(.bottom, 16)
         }
     }
 }
@@ -113,6 +114,9 @@ struct FullscreenGraphView: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                     Spacer(minLength: 8)
+                    if verticalSizeClass == .compact {
+                        GraphToolbar(onFullscreen: nil, iconsOnly: true)
+                    }
                     Button {
                         dismiss()
                     } label: {
@@ -131,9 +135,8 @@ struct FullscreenGraphView: View {
                 if verticalSizeClass == .compact {
                     HStack(alignment: .center, spacing: 12) {
                         PlaybackReadoutView(compact: true)
-                            .frame(maxWidth: 300)
+                            .frame(maxWidth: 320)
                         TransportControls(compact: true)
-                        GraphToolbar(onFullscreen: nil, iconsOnly: true)
                     }
                 } else {
                     PlaybackReadoutView()

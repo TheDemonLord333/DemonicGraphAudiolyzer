@@ -24,7 +24,7 @@ struct GraphCard: View {
             }
             PlaybackReadoutView(compact: compact)
         }
-        .demonCard(crest: true, padding: compact ? 8 : 12, hornHeight: compact ? 26 : 38)
+        .demonCard(crest: true, padding: compact ? 10 : 12, hornHeight: compact ? 26 : 38)
     }
 
     private var formulaLabel: some View {

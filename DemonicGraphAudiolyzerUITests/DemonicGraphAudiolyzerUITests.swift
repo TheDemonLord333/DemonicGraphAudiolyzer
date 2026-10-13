@@ -83,6 +83,7 @@ final class DemonicGraphAudiolyzerUITests: XCTestCase {
         field.typeText("sin(x)*2")
         let done = app.buttons["keyboardDone"]
         if done.waitForExistence(timeout: 3) {
+            screenshot("00 Mathe-Zusatztastatur")
             done.tap()
         }
 
