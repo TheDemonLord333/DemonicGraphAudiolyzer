@@ -22,6 +22,20 @@ enum PreferenceKey {
 
     static let selectedTab = "ui.selectedTab"
     static let lastState = "session.lastState.v1"
+
+    static let all: [String] = [
+        lightGraph, showGrid, showPreview, showCursorLine, defaultAutoFitY,
+        defaultDuration, defaultVolume, defaultLoop, defaultLevel,
+        exportFormat, exportSampleRate, exportWAVBitDepth, exportAACBitrate, exportMP3Bitrate, exportMP3Quality,
+        selectedTab, lastState
+    ]
+
+    /// Deterministic start for UI tests: forget all stored preferences.
+    static func resetAll(in defaults: UserDefaults = .standard) {
+        for key in all {
+            defaults.removeObject(forKey: key)
+        }
+    }
 }
 
 /// Typed access to the default values chosen in the settings.

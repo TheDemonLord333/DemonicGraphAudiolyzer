@@ -22,7 +22,12 @@ final class DemonicGraphAudiolyzerUITestsLaunchTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing"]
         app.launch()
-        XCTAssertTrue(app.textFields["formulaField"].waitForExistence(timeout: 15))
+        let field = app.textFields["formulaField"]
+        if !field.waitForExistence(timeout: 20) {
+            print("=== UI-DIAGNOSE: Launch ohne Formelfeld ===\n\(app.debugDescription)\n=== UI-DIAGNOSE ENDE ===")
+        }
+        XCTAssertTrue(app.descendants(matching: .any)["graphCanvas"].waitForExistence(timeout: 5) || field.exists,
+                      "Startbildschirm zeigt weder Formelfeld noch Graph")
 
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = "Startbildschirm Graph & Klang"

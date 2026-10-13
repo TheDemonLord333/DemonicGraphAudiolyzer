@@ -43,19 +43,19 @@ struct DemonEyes: View {
 
 /// Horn pair with crown spike that sits on top of a card.
 struct DemonCrest: View {
-    var hornHeight: CGFloat = 28
+    var hornHeight: CGFloat = 40
     var showsEyes = true
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 0) {
             DemonHorn()
-                .frame(width: hornHeight * 1.35, height: hornHeight)
+                .frame(width: hornHeight * 1.2, height: hornHeight)
             Spacer(minLength: 8)
             VStack(spacing: 2) {
                 CrownSpikeShape()
                     .fill(DemonTheme.metalGradient)
                     .overlay(CrownSpikeShape().stroke(DemonTheme.metalHighlight.opacity(0.6), lineWidth: 0.8))
-                    .frame(width: hornHeight * 0.42, height: hornHeight * 0.5)
+                    .frame(width: hornHeight * 0.42, height: hornHeight * 0.6)
                     .shadow(color: DemonTheme.blurple.opacity(0.6), radius: 4)
                 if showsEyes {
                     DemonEyes(size: hornHeight * 0.42)
@@ -64,9 +64,10 @@ struct DemonCrest: View {
             }
             Spacer(minLength: 8)
             DemonHorn(mirrored: true)
-                .frame(width: hornHeight * 1.35, height: hornHeight)
+                .frame(width: hornHeight * 1.2, height: hornHeight)
         }
-        .padding(.horizontal, 6)
+        // The horns reach slightly beyond the card corners, like on the icon's crest.
+        .padding(.horizontal, -10)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
@@ -117,7 +118,7 @@ struct DemonBackground: View {
 struct DemonCardModifier: ViewModifier {
     var crest = false
     var padding: CGFloat = 16
-    var hornHeight: CGFloat = 26
+    var hornHeight: CGFloat = 38
 
     func body(content: Content) -> some View {
         content
@@ -142,17 +143,17 @@ struct DemonCardModifier: ViewModifier {
             .overlay(alignment: .top) {
                 if crest {
                     DemonCrest(hornHeight: hornHeight)
-                        .offset(y: -hornHeight + 6)
+                        .offset(y: -hornHeight + 7)
                 }
             }
-            .padding(.top, crest ? hornHeight - 4 : 0)
+            .padding(.top, crest ? hornHeight - 6 : 0)
     }
 }
 
 extension View {
     /// Dark metallic card with demonic outline; `crest` adds horns, crown and eyes on top.
-    func demonCard(crest: Bool = false, padding: CGFloat = 16) -> some View {
-        modifier(DemonCardModifier(crest: crest, padding: padding))
+    func demonCard(crest: Bool = false, padding: CGFloat = 16, hornHeight: CGFloat = 38) -> some View {
+        modifier(DemonCardModifier(crest: crest, padding: padding, hornHeight: hornHeight))
     }
 }
 
@@ -191,10 +192,10 @@ struct DemonHeader: View {
     var compact = false
 
     var body: some View {
-        VStack(spacing: compact ? 0 : 4) {
+        VStack(spacing: compact ? 0 : 2) {
             if !compact {
                 DemonCrest(hornHeight: 30)
-                    .frame(maxWidth: 260)
+                    .frame(maxWidth: 230)
             }
             Text("DEMONIC GRAPH")
                 .font((compact ? Font.headline : Font.title2).weight(.black))
@@ -222,6 +223,7 @@ struct DemonHeader: View {
 
 /// "Graph abspielen": blade shape with metallic blurple frame and green glow.
 struct DemonPrimaryButtonStyle: ButtonStyle {
+    var horizontalPadding: CGFloat = 36
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -229,7 +231,7 @@ struct DemonPrimaryButtonStyle: ButtonStyle {
         configuration.label
             .font(.headline.weight(.heavy))
             .foregroundStyle(DemonTheme.textPrimary)
-            .padding(.horizontal, 36)
+            .padding(.horizontal, horizontalPadding)
             .padding(.vertical, 12)
             .frame(minHeight: 58)
             .background {

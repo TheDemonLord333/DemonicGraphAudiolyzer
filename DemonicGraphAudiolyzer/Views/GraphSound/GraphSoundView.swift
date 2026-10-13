@@ -37,49 +37,57 @@ struct GraphSoundView: View {
     }
 
     private var portrait: some View {
-        ScrollView {
-            VStack(spacing: 18) {
-                DemonHeader()
-                FormulaEditorCard()
-                GraphCard(appearance: appearance, plotHeight: 300, onFullscreen: { showFullscreen = true })
-                TransportControls()
-                    .padding(.horizontal, 4)
-                SoundModeCard(appearance: appearance)
-                ParameterCard()
-                PlaybackCard()
-                AdvancedSettingsCard()
-                ExportEntryCard(onExport: { showExport = true })
+        GeometryReader { geometry in
+            ScrollView {
+                portraitContent(plotHeight: min(320, max(200, geometry.size.height * 0.32)))
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 28)
+            .scrollDismissesKeyboard(.interactively)
         }
-        .scrollDismissesKeyboard(.interactively)
+    }
+
+    private func portraitContent(plotHeight: CGFloat) -> some View {
+        VStack(spacing: 16) {
+            DemonHeader()
+            FormulaEditorCard()
+            GraphCard(appearance: appearance, plotHeight: plotHeight, onFullscreen: { showFullscreen = true })
+            TransportControls()
+                .padding(.horizontal, 4)
+            SoundModeCard(appearance: appearance)
+            ParameterCard()
+            PlaybackCard()
+            AdvancedSettingsCard()
+            ExportEntryCard(onExport: { showExport = true })
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 4)
+        .padding(.bottom, 28)
     }
 
     private var landscape: some View {
         GeometryReader { geometry in
             HStack(alignment: .top, spacing: 14) {
-                VStack(spacing: 8) {
-                    GraphCard(appearance: appearance, plotHeight: nil, onFullscreen: { showFullscreen = true })
-                    TransportControls(compact: true)
-                }
-                .frame(maxHeight: .infinity)
+                // Left: the graph gets the full height.
+                GraphCard(appearance: appearance, plotHeight: nil, compact: true, onFullscreen: { showFullscreen = true })
+                    .frame(maxHeight: .infinity)
 
-                ScrollView {
-                    VStack(spacing: 16) {
-                        DemonHeader(compact: true)
-                        FormulaEditorCard()
-                        SoundModeCard(appearance: appearance)
-                        ParameterCard()
-                        PlaybackCard()
-                        AdvancedSettingsCard()
-                        ExportEntryCard(onExport: { showExport = true })
+                // Right: transport always visible, the remaining controls scroll.
+                VStack(spacing: 10) {
+                    TransportControls(compact: true)
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            FormulaEditorCard()
+                            SoundModeCard(appearance: appearance)
+                            ParameterCard()
+                            PlaybackCard()
+                            AdvancedSettingsCard()
+                            ExportEntryCard(onExport: { showExport = true })
+                            DemonHeader(compact: true)
+                        }
+                        .padding(.bottom, 20)
                     }
-                    .padding(.bottom, 20)
+                    .scrollDismissesKeyboard(.interactively)
                 }
-                .scrollDismissesKeyboard(.interactively)
-                .frame(width: min(max(geometry.size.width * 0.4, 300), 440))
+                .frame(width: min(max(geometry.size.width * 0.44, 320), 460))
             }
             .padding(.horizontal, 12)
             .padding(.top, 4)
@@ -121,11 +129,11 @@ struct FullscreenGraphView: View {
                     .frame(maxHeight: .infinity)
 
                 if verticalSizeClass == .compact {
-                    HStack(alignment: .center, spacing: 16) {
-                        PlaybackReadoutView()
-                            .frame(maxWidth: 360)
+                    HStack(alignment: .center, spacing: 12) {
+                        PlaybackReadoutView(compact: true)
+                            .frame(maxWidth: 300)
                         TransportControls(compact: true)
-                        GraphToolbar(onFullscreen: nil)
+                        GraphToolbar(onFullscreen: nil, iconsOnly: true)
                     }
                 } else {
                     PlaybackReadoutView()

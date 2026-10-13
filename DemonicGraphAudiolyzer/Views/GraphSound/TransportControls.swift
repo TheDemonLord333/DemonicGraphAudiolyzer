@@ -8,9 +8,15 @@ struct TransportControls: View {
     var body: some View {
         VStack(spacing: compact ? 8 : 14) {
             if compact {
-                HStack(spacing: 10) {
-                    playButton
-                    secondaryButtons
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        playButton
+                        secondaryButtons
+                    }
+                    VStack(spacing: 8) {
+                        playButton
+                        HStack(spacing: 8) { secondaryButtons }
+                    }
                 }
             } else {
                 playButton
@@ -50,7 +56,7 @@ struct TransportControls: View {
                     .minimumScaleFactor(0.7)
             }
         }
-        .buttonStyle(DemonPrimaryButtonStyle())
+        .buttonStyle(DemonPrimaryButtonStyle(horizontalPadding: compact ? 20 : 36))
         .disabled(!canPlay)
         .accessibilityLabel("Graph abspielen")
         .accessibilityHint(model.phase == .playing ? "Startet den Durchlauf von vorne" : "Spielt den Graphen als Klang ab")
@@ -71,7 +77,7 @@ struct TransportControls: View {
                 }
             }
         }
-        .buttonStyle(DemonRuneButtonStyle(isActive: isPaused))
+        .buttonStyle(DemonRuneButtonStyle(isActive: isPaused, minWidth: compact ? 48 : 60))
         .disabled(!(model.phase == .playing || isPaused))
         .accessibilityLabel(isPaused ? "Fortsetzen" : "Pausieren")
         .accessibilityIdentifier("pauseButton")
@@ -87,7 +93,7 @@ struct TransportControls: View {
                 }
             }
         }
-        .buttonStyle(DemonRuneButtonStyle())
+        .buttonStyle(DemonRuneButtonStyle(minWidth: compact ? 48 : 60))
         .disabled(!model.phase.isActive)
         .accessibilityLabel("Stopp")
         .accessibilityHint("Beendet die Wiedergabe und springt an den Anfang")
@@ -104,7 +110,7 @@ struct TransportControls: View {
                 }
             }
         }
-        .buttonStyle(DemonRuneButtonStyle(isActive: model.isLooping))
+        .buttonStyle(DemonRuneButtonStyle(isActive: model.isLooping, minWidth: compact ? 48 : 60))
         .accessibilityLabel("Wiederholung")
         .accessibilityValue(model.isLooping ? "ein" : "aus")
         .accessibilityAddTraits(model.isLooping ? .isSelected : [])

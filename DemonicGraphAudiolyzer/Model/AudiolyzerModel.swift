@@ -41,6 +41,10 @@ final class AudiolyzerModel {
         didSet {
             guard settings != oldValue else { return }
             soundConfigurationDidChange(affectsGraph: false)
+            if settings.mode != oldValue.mode {
+                // Show the played range or the waveform section of the new mode.
+                resetView()
+            }
         }
     }
 

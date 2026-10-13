@@ -19,6 +19,9 @@ struct DemonicGraphAudiolyzerApp: App {
 
     init() {
         let isUITesting = ProcessInfo.processInfo.arguments.contains(Self.uiTestingArgument)
+        if isUITesting {
+            PreferenceKey.resetAll()
+        }
         container = PersistenceController.makeContainer(inMemory: isUITesting)
         let sessionStore = SessionStateStore(defaults: .standard, isEnabled: !isUITesting)
         _model = State(initialValue: AudiolyzerModel(sessionStore: sessionStore))

@@ -90,6 +90,43 @@ jobs:
             | tee ui-tests.log | grep -E "error:|Test Case|Executed|skipped|TEST (SUCCEEDED|FAILED)|\*\* " || true
           grep -q "TEST SUCCEEDED" ui-tests.log
 
+      - name: Export UI test screenshots
+        if: always()
+        run: |
+          mkdir -p screenshots
+          if [ -d build/UITests.xcresult ]; then
+            xcrun xcresulttool export attachments --path build/UITests.xcresult --output-path screenshots || true
+          fi
+          ls -la screenshots | head -80
+
+      - name: UI test diagnostics
+        if: always()
+        run: |
+          [ -f ui-tests.log ] && sed -n '/=== UI-DIAGNOSE/,/UI-DIAGNOSE ENDE/p' ui-tests.log | head -400 || true
+
+      - name: Screenshots for log-based design review
+        if: always()
+        run: |
+          [ -f screenshots/manifest.json ] && cat screenshots/manifest.json | head -200
+          mkdir -p small
+          for f in screenshots/*; do
+            case "$f" in *.png|*.jpg|*.jpeg|*.heic) ;; *) continue ;; esac
+            name=$(basename "$f")
+            sips -s format jpeg -s formatOptions 55 -Z 420 "$f" --out "small/${name%.*}.jpg" >/dev/null 2>&1 || continue
+            echo "=== SCREENSHOT ${name} ==="
+            base64 -b 1000 -i "small/${name%.*}.jpg"
+            echo "=== SCREENSHOT END ==="
+          done
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-screenshots
+          path: screenshots
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Upload logs and results
         if: always()
         uses: actions/upload-artifact@v4

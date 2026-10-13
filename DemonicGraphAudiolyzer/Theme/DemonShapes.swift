@@ -5,7 +5,7 @@ import SwiftUI
 struct DemonPanelShape: Shape {
     var cornerCut: CGFloat = DemonTheme.cornerCut
     /// Width of the side blades (drawn inside the rect).
-    var spike: CGFloat = 5
+    var spike: CGFloat = 7
 
     func path(in rect: CGRect) -> Path {
         let c = min(cornerCut, rect.width / 4, rect.height / 4)
@@ -15,7 +15,7 @@ struct DemonPanelShape: Shape {
         let top = rect.minY
         let bottom = rect.maxY
         let midY = rect.midY
-        let blade = min(s * 2.2, rect.height / 6)
+        let blade = min(s * 2.6, rect.height / 5)
         let bend: CGFloat = 0.72
 
         var path = Path()
@@ -56,11 +56,14 @@ struct DemonHornShape: Shape {
             return CGPoint(x: px, y: rect.minY + y * h)
         }
         var path = Path()
-        path.move(to: p(0.42, 1.0))
-        // Outer edge sweeping outwards and up to the tip.
-        path.addCurve(to: p(0.10, 0.0), control1: p(0.02, 0.82), control2: p(-0.04, 0.30))
-        // Inner edge curving back down to the base.
-        path.addCurve(to: p(1.0, 1.0), control1: p(0.34, 0.30), control2: p(0.52, 0.86))
+        // Wide base on the bottom edge (inner side), outer contour bulging outwards …
+        path.move(to: p(1.0, 1.0))
+        path.addCurve(to: p(0.05, 0.45), control1: p(0.6, 1.0), control2: p(0.0, 0.9))
+        // … rising to the sharp tip that points upwards …
+        path.addCurve(to: p(0.32, 0.0), control1: p(0.08, 0.2), control2: p(0.18, 0.06))
+        // … and the concave inner contour back down to the base.
+        path.addCurve(to: p(0.36, 0.55), control1: p(0.28, 0.18), control2: p(0.26, 0.38))
+        path.addCurve(to: p(0.56, 1.0), control1: p(0.44, 0.70), control2: p(0.52, 0.80))
         path.closeSubpath()
         return path
     }
@@ -78,8 +81,9 @@ struct DemonHornHighlightShape: Shape {
             return CGPoint(x: px, y: rect.minY + y * h)
         }
         var path = Path()
-        path.move(to: p(0.38, 0.92))
-        path.addCurve(to: p(0.12, 0.06), control1: p(0.08, 0.76), control2: p(0.02, 0.32))
+        path.move(to: p(0.85, 0.96))
+        path.addCurve(to: p(0.12, 0.45), control1: p(0.45, 0.93), control2: p(0.10, 0.80))
+        path.addCurve(to: p(0.30, 0.04), control1: p(0.13, 0.25), control2: p(0.20, 0.12))
         return path
     }
 }
