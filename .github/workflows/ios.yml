@@ -14,7 +14,7 @@ jobs:
   build-and-test:
     runs-on: macos-26
     permissions:
-      contents: write
+      contents: read
     timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
@@ -105,28 +105,6 @@ jobs:
         if: always()
         run: |
           [ -f ui-tests.log ] && sed -n '/=== UI-DIAGNOSE/,/UI-DIAGNOSE ENDE/p' ui-tests.log | head -400 || true
-
-      - name: Publish screenshots to ci-screenshots branch (temporary design review)
-        if: always() && github.event_name != 'pull_request'
-        run: |
-          mkdir -p review
-          for f in screenshots/*; do
-            case "$f" in *.png|*.jpg|*.jpeg|*.heic) ;; *) continue ;; esac
-            name=$(basename "$f")
-            sips -s format jpeg -s formatOptions 80 -Z 1400 "$f" --out "review/${name%.*}.jpg" >/dev/null 2>&1 || true
-          done
-          [ -f screenshots/manifest.json ] && cp screenshots/manifest.json review/
-          ls review/*.jpg >/dev/null 2>&1 || exit 0
-          cd review
-          git init -q
-          git config user.name "ci-screenshots"
-          git config user.email "ci-screenshots@users.noreply.github.com"
-          git checkout -q -b ci-screenshots
-          git add -A
-          git commit -q -m "UI screenshots for ${GITHUB_SHA}"
-          git push -q -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci-screenshots || true
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Upload screenshots
         if: always()

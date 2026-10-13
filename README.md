@@ -207,20 +207,28 @@ Der letzte Arbeitszustand (Formel, Parameter, Einstellungen, Ausschnitt, Lautst�
 
 **UI-Tests** (`DemonicGraphAudiolyzerUITests`, XCTest): Formel eingeben → Graph anzeigen → abspielen → pausieren → stoppen; ungültige Formel; Querformat; Presets/Einstellungen erreichbar; Start-Screenshot.
 
-**Tatsächlich ausgeführt (in dieser Entwicklungsumgebung, Linux ohne Xcode):**
+**Tatsächlich ausgeführt**
 
-* Swift 6.1 (offizielle Ubuntu-Pakete): Kernmodul + plattformunabhängige Tests → **56 Tests bestanden** (Parser, Abtastung, Klang/PCM, Transport, WAV, Sitzungszustand, Projekt-/Icon-Prüfung).
+*In der Entwicklungsumgebung (Linux, ohne Xcode):*
+
+* Swift 6.1 (offizielle Ubuntu-Pakete): Kernmodul + plattformunabhängige Tests → **57 Tests bestanden** (Parser, Abtastung, Klang/PCM, Transport, WAV, Sitzungszustand, Projekt-/Icon-Prüfung).
 * `swift test` für `Packages/LameKit` → **5 Tests bestanden**; erzeugtes MP3 mit `ffprobe`/`ffmpeg` geprüft (MPEG-1 Layer III, 192 kbit/s, exakt 2,000 s dank Info-Tag, 440 Hz).
-* Gerenderte Presets spektral analysiert: keine Aliasing-Anteile (< 10⁻⁵ der Energie außerhalb der Harmonischen), keine Knackser an Definitionslücken.
-* `project.pbxproj` maschinell geparst (Paketreferenz, Bundle-IDs, Deployment Target).
-* LAME-Quellen per `verify-lame-sources.sh` gegen das Original verifiziert.
+* Gerenderte Presets spektral analysiert: keine Aliasing-Anteile (< 10⁻⁵ der Energie außerhalb der Harmonischen), keine Knackser an Definitionslücken; 10 s Audio werden in ca. 30 ms erzeugt (Release-Build, x86-64).
+* `project.pbxproj` maschinell geparst (Paketreferenz, Bundle-IDs, Deployment Target); LAME-Quellen per `verify-lame-sources.sh` gegen das Original verifiziert.
 
-**Auf einem Mac (Xcode 26) bzw. iPhone:** Der Workflow `.github/workflows/ios.yml` baut auf einem macOS-Runner mit Xcode 26 die App für iPhone (unsigniert), führt die LameKit-Tests sowie alle Unit- und UI-Tests im iOS-Simulator aus. Ergebnis siehe Abschnitt [Build-Status](#build-status).
-Auf einem echten iPhone noch selbst zu prüfen: Signierung mit dem eigenen Team, Homescreen-Icon, Klang über Lautsprecher/Kopfhörer/Bluetooth (Latenzausgleich), Kopfhörer-Abziehen und Anrufe, „In Dateien sichern“/Teilen, Bedienung mit VoiceOver und großen Schriftgrößen.
+*Auf macOS mit Xcode 26 (GitHub Actions, Workflow `.github/workflows/ios.yml`, Runner `macos-26`, Simulator „iPhone Air“, iOS 26.5):*
+
+* `swift test` für LameKit auf macOS → bestanden.
+* **Release-Build für iPhone** (`generic/platform=iOS`, arm64, ohne Signierung) → **BUILD SUCCEEDED**.
+* **Unit-Tests im Simulator: alle bestanden** (Swift Testing, 10 Suites), u. a. echte AAC-/MP3-/WAV-Exporte mit AVFoundation-Dekodierung, 120-s-Export ohne blockierten Main Actor, Vorschau = Export bitgenau, SwiftData-Neustart, Wiedergabe mit echter AVAudioEngine (Pause hält die Audiouhr an, Fortsetzen, Ende, Wiederholung).
+* **UI-Tests im Simulator: alle bestanden** – Formel eingeben → Graph anzeigen → abspielen → pausieren → stoppen, ungültige Formel, Querformat inkl. Vollbild, Presets/Einstellungen/Exportdialog, Start-Screenshots in allen UI-Konfigurationen.
+* Screenshots aller Hauptansichten (Hoch- und Querformat, Wiedergabe, Pause, Formelfehler, Presets, Einstellungen, Export, Mathe-Tastatur) wurden aus dem Testlauf ausgewertet; sie liegen als Artefakt `ui-screenshots` am jeweiligen Workflow-Lauf.
+
+*Noch auf einem echten iPhone selbst zu prüfen* (hier nicht möglich): Signierung mit dem eigenen Team und Installation, Homescreen-Icon auf dem Gerät, Klang über Lautsprecher/Kopfhörer/Bluetooth (Latenzausgleich), Kopfhörer-Abziehen und Anrufe, „In Dateien sichern“ und Teilen mit echten Ziel-Apps, Bedienung mit VoiceOver und sehr großen Schriftgrößen, Leistung auf älteren Geräten.
 
 ### Build-Status
 
-Siehe GitHub Actions „iOS Build & Tests“ für den Branch dieses Stands.
+Jeder Push auf `main` oder `claude/**` und jeder Pull Request startet „iOS Build & Tests“ (LameKit-Tests, iPhone-Build, Unit- und UI-Tests im Simulator). Ergebnisse, Logs, `.xcresult`-Bundles und Screenshots stehen als Artefakte am Lauf.
 
 ## Verbleibende Einschränkungen
 
