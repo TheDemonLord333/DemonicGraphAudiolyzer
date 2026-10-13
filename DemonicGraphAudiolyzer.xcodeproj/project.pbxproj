@@ -1,0 +1,583 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		5DFB1C2E307E54FB00D0F551 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5DFB1C16307E54F800D0F551 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5DFB1C1D307E54F800D0F551;
+			remoteInfo = DemonicGraphAudiolyzer;
+		};
+		5DFB1C38307E54FB00D0F551 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5DFB1C16307E54F800D0F551 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5DFB1C1D307E54F800D0F551;
+			remoteInfo = DemonicGraphAudiolyzer;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		5DFB1C1E307E54F800D0F551 /* DemonicGraphAudiolyzer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DemonicGraphAudiolyzer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5DFB1C2D307E54FB00D0F551 /* DemonicGraphAudiolyzerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DemonicGraphAudiolyzerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		5DFB1C37307E54FB00D0F551 /* DemonicGraphAudiolyzerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DemonicGraphAudiolyzerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		5DFB1C20307E54F800D0F551 /* DemonicGraphAudiolyzer */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = DemonicGraphAudiolyzer;
+			sourceTree = "<group>";
+		};
+		5DFB1C30307E54FB00D0F551 /* DemonicGraphAudiolyzerTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = DemonicGraphAudiolyzerTests;
+			sourceTree = "<group>";
+		};
+		5DFB1C3A307E54FB00D0F551 /* DemonicGraphAudiolyzerUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = DemonicGraphAudiolyzerUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		5DFB1C1B307E54F800D0F551 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5DFB1C2A307E54FB00D0F551 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5DFB1C34307E54FB00D0F551 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		5DFB1C15307E54F800D0F551 = {
+			isa = PBXGroup;
+			children = (
+				5DFB1C20307E54F800D0F551 /* DemonicGraphAudiolyzer */,
+				5DFB1C30307E54FB00D0F551 /* DemonicGraphAudiolyzerTests */,
+				5DFB1C3A307E54FB00D0F551 /* DemonicGraphAudiolyzerUITests */,
+				5DFB1C1F307E54F800D0F551 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		5DFB1C1F307E54F800D0F551 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				5DFB1C1E307E54F800D0F551 /* DemonicGraphAudiolyzer.app */,
+				5DFB1C2D307E54FB00D0F551 /* DemonicGraphAudiolyzerTests.xctest */,
+				5DFB1C37307E54FB00D0F551 /* DemonicGraphAudiolyzerUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		5DFB1C1D307E54F800D0F551 /* DemonicGraphAudiolyzer */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5DFB1C41307E54FB00D0F551 /* Build configuration list for PBXNativeTarget "DemonicGraphAudiolyzer" */;
+			buildPhases = (
+				5DFB1C1A307E54F800D0F551 /* Sources */,
+				5DFB1C1B307E54F800D0F551 /* Frameworks */,
+				5DFB1C1C307E54F800D0F551 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				5DFB1C20307E54F800D0F551 /* DemonicGraphAudiolyzer */,
+			);
+			name = DemonicGraphAudiolyzer;
+			packageProductDependencies = (
+			);
+			productName = DemonicGraphAudiolyzer;
+			productReference = 5DFB1C1E307E54F800D0F551 /* DemonicGraphAudiolyzer.app */;
+			productType = "com.apple.product-type.application";
+		};
+		5DFB1C2C307E54FB00D0F551 /* DemonicGraphAudiolyzerTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5DFB1C44307E54FB00D0F551 /* Build configuration list for PBXNativeTarget "DemonicGraphAudiolyzerTests" */;
+			buildPhases = (
+				5DFB1C29307E54FB00D0F551 /* Sources */,
+				5DFB1C2A307E54FB00D0F551 /* Frameworks */,
+				5DFB1C2B307E54FB00D0F551 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5DFB1C2F307E54FB00D0F551 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				5DFB1C30307E54FB00D0F551 /* DemonicGraphAudiolyzerTests */,
+			);
+			name = DemonicGraphAudiolyzerTests;
+			packageProductDependencies = (
+			);
+			productName = DemonicGraphAudiolyzerTests;
+			productReference = 5DFB1C2D307E54FB00D0F551 /* DemonicGraphAudiolyzerTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		5DFB1C36307E54FB00D0F551 /* DemonicGraphAudiolyzerUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5DFB1C47307E54FB00D0F551 /* Build configuration list for PBXNativeTarget "DemonicGraphAudiolyzerUITests" */;
+			buildPhases = (
+				5DFB1C33307E54FB00D0F551 /* Sources */,
+				5DFB1C34307E54FB00D0F551 /* Frameworks */,
+				5DFB1C35307E54FB00D0F551 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5DFB1C39307E54FB00D0F551 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				5DFB1C3A307E54FB00D0F551 /* DemonicGraphAudiolyzerUITests */,
+			);
+			name = DemonicGraphAudiolyzerUITests;
+			packageProductDependencies = (
+			);
+			productName = DemonicGraphAudiolyzerUITests;
+			productReference = 5DFB1C37307E54FB00D0F551 /* DemonicGraphAudiolyzerUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		5DFB1C16307E54F800D0F551 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2630;
+				LastUpgradeCheck = 2630;
+				TargetAttributes = {
+					5DFB1C1D307E54F800D0F551 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+					5DFB1C2C307E54FB00D0F551 = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = 5DFB1C1D307E54F800D0F551;
+					};
+					5DFB1C36307E54FB00D0F551 = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = 5DFB1C1D307E54F800D0F551;
+					};
+				};
+			};
+			buildConfigurationList = 5DFB1C19307E54F800D0F551 /* Build configuration list for PBXProject "DemonicGraphAudiolyzer" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 5DFB1C15307E54F800D0F551;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 5DFB1C1F307E54F800D0F551 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				5DFB1C1D307E54F800D0F551 /* DemonicGraphAudiolyzer */,
+				5DFB1C2C307E54FB00D0F551 /* DemonicGraphAudiolyzerTests */,
+				5DFB1C36307E54FB00D0F551 /* DemonicGraphAudiolyzerUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		5DFB1C1C307E54F800D0F551 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5DFB1C2B307E54FB00D0F551 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5DFB1C35307E54FB00D0F551 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		5DFB1C1A307E54F800D0F551 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5DFB1C29307E54FB00D0F551 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5DFB1C33307E54FB00D0F551 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		5DFB1C2F307E54FB00D0F551 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5DFB1C1D307E54F800D0F551 /* DemonicGraphAudiolyzer */;
+			targetProxy = 5DFB1C2E307E54FB00D0F551 /* PBXContainerItemProxy */;
+		};
+		5DFB1C39307E54FB00D0F551 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5DFB1C1D307E54F800D0F551 /* DemonicGraphAudiolyzer */;
+			targetProxy = 5DFB1C38307E54FB00D0F551 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		5DFB1C3F307E54FB00D0F551 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = LWL7HM459L;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		5DFB1C40307E54FB00D0F551 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = LWL7HM459L;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		5DFB1C42307E54FB00D0F551 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LWL7HM459L;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = me.thedemonlord333.DemonicGraphAudiolyzer;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		5DFB1C43307E54FB00D0F551 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LWL7HM459L;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = me.thedemonlord333.DemonicGraphAudiolyzer;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		5DFB1C45307E54FB00D0F551 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LWL7HM459L;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = me.thedemonlord333.DemonicGraphAudiolyzerTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DemonicGraphAudiolyzer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/DemonicGraphAudiolyzer";
+			};
+			name = Debug;
+		};
+		5DFB1C46307E54FB00D0F551 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LWL7HM459L;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = me.thedemonlord333.DemonicGraphAudiolyzerTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DemonicGraphAudiolyzer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/DemonicGraphAudiolyzer";
+			};
+			name = Release;
+		};
+		5DFB1C48307E54FB00D0F551 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LWL7HM459L;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = me.thedemonlord333.DemonicGraphAudiolyzerUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = DemonicGraphAudiolyzer;
+			};
+			name = Debug;
+		};
+		5DFB1C49307E54FB00D0F551 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LWL7HM459L;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = me.thedemonlord333.DemonicGraphAudiolyzerUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = DemonicGraphAudiolyzer;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		5DFB1C19307E54F800D0F551 /* Build configuration list for PBXProject "DemonicGraphAudiolyzer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5DFB1C3F307E54FB00D0F551 /* Debug */,
+				5DFB1C40307E54FB00D0F551 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5DFB1C41307E54FB00D0F551 /* Build configuration list for PBXNativeTarget "DemonicGraphAudiolyzer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5DFB1C42307E54FB00D0F551 /* Debug */,
+				5DFB1C43307E54FB00D0F551 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5DFB1C44307E54FB00D0F551 /* Build configuration list for PBXNativeTarget "DemonicGraphAudiolyzerTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5DFB1C45307E54FB00D0F551 /* Debug */,
+				5DFB1C46307E54FB00D0F551 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5DFB1C47307E54FB00D0F551 /* Build configuration list for PBXNativeTarget "DemonicGraphAudiolyzerUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5DFB1C48307E54FB00D0F551 /* Debug */,
+				5DFB1C49307E54FB00D0F551 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 5DFB1C16307E54F800D0F551 /* Project object */;
+}
