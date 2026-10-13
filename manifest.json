@@ -1,0 +1,183 @@
+[
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "CB15797E-6053-40B1-BB72-7F30D005A4F2",
+        "deviceName" : "iPhone Air",
+        "exportedFileName" : "12C68616-6731-4BA3-8C52-18609D41E040.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "03 Pausiert_0_3BCA2926-9EE9-4742-9F5F-61CDF200D13A.png",
+        "timestamp" : 1791905155.918
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "CB15797E-6053-40B1-BB72-7F30D005A4F2",
+        "deviceName" : "iPhone Air",
+        "exportedFileName" : "365B7310-96A3-4965-92DA-2417666875C2.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "02 Wiedergabe_0_D0C6BC84-D152-4E94-BD88-69824783BDB4.png",
+        "timestamp" : 1791905149.31
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "CB15797E-6053-40B1-BB72-7F30D005A4F2",
+        "deviceName" : "iPhone Air",
+        "exportedFileName" : "0EB18914-576B-4FAA-BAA5-0AC4B9FE82F0.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "01 Graph angezeigt_0_D228DF03-2E02-40AB-850E-52577EB3DDCE.png",
+        "timestamp" : 1791905135.976
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "CB15797E-6053-40B1-BB72-7F30D005A4F2",
+        "deviceName" : "iPhone Air",
+        "exportedFileName" : "210205E1-AF26-4FDE-A103-63E25028448B.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "00 Mathe-Zusatztastatur_0_9F6DC4D8-52E8-4386-9208-D0688E1013BC.png",
+        "timestamp" : 1791905133.814
+      }
+    ],
+    "testIdentifier" : "DemonicGraphAudiolyzerUITests/testEnterFormulaShowGraphPlayPauseStop()",
+    "testIdentifierURL" : "test://com.apple.xcode/DemonicGraphAudiolyzer/DemonicGraphAudiolyzerUITests/DemonicGraphAudiolyzerUITests/testEnterFormulaShowGraphPlayPauseStop"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "CB15797E-6053-40B1-BB72-7F30D005A4F2",
+        "deviceName" : "iPhone Air",
+        "exportedFileName" : "946CEDC0-921A-4AA8-BE32-D8BD70C24BE7.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "04 Formelfehler_0_085C78AB-3EB3-4290-93F8-61B08CDD0795.png",
+        "timestamp" : 1791905186.505
+      }
+    ],
+    "testIdentifier" : "DemonicGraphAudiolyzerUITests/testInvalidFormulaShowsErrorAndDisablesPlayback()",
+    "testIdentifierURL" : "test://com.apple.xcode/DemonicGraphAudiolyzer/DemonicGraphAudiolyzerUITests/DemonicGraphAudiolyzerUITests/testInvalidFormulaShowsErrorAndDisablesPlayback"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "CB15797E-6053-40B1-BB72-7F30D005A4F2",
+        "deviceName" : "iPhone Air",
+        "exportedFileName" : "4FE9C1AE-E08D-402E-85A7-E1F05D96B5B7.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "06 Vollbild quer_0_93151452-1FDE-48CE-A050-DC52A3AEFD77.png",
+        "timestamp" : 1791905205.801
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "CB15797E-6053-40B1-BB72-7F30D005A4F2",
+        "deviceName" : "iPhone Air",
+        "exportedFileName" : "6F762617-D73F-4D52-8A84-E06BC680E2EA.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "05 Querformat_0_425519A5-0584-43D5-8343-42E2A5400452.png",
+        "timestamp" : 1791905204.085
+      }
+    ],
+    "testIdentifier" : "DemonicGraphAudiolyzerUITests/testLandscapeShowsGraphAndControls()",
+    "testIdentifierURL" : "test://com.apple.xcode/DemonicGraphAudiolyzer/DemonicGraphAudiolyzerUITests/DemonicGraphAudiolyzerUITests/testLandscapeShowsGraphAndControls"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "CB15797E-6053-40B1-BB72-7F30D005A4F2",
+        "deviceName" : "iPhone Air",
+        "exportedFileName" : "F88D3C83-93F0-49E2-B8DE-5D39621D9F43.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "10 Exportdialog_0_71E97AD0-64E3-4BE3-A2A8-2FA37EF8456C.png",
+        "timestamp" : 1791905230.684
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "CB15797E-6053-40B1-BB72-7F30D005A4F2",
+        "deviceName" : "iPhone Air",
+        "exportedFileName" : "C25882B5-9BFC-4E25-80CF-7545A6BCA922.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "09 Einstellungen_0_DDAA1669-0ABE-4951-9D3F-AE61ACD79DF5.png",
+        "timestamp" : 1791905226.021
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "CB15797E-6053-40B1-BB72-7F30D005A4F2",
+        "deviceName" : "iPhone Air",
+        "exportedFileName" : "C57D810F-4D80-40D7-8DE0-2A88D80A0751.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "08 Preset Stufen geladen_0_AFF61752-0602-4761-ABB9-522537CE9EF8.png",
+        "timestamp" : 1791905223.371
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "CB15797E-6053-40B1-BB72-7F30D005A4F2",
+        "deviceName" : "iPhone Air",
+        "exportedFileName" : "5E4ADC28-B172-44D2-A223-CD3723028A5C.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "07 Presets_0_AAA23285-E6AF-4B50-A6A7-F4EF5449F2D0.png",
+        "timestamp" : 1791905220.295
+      }
+    ],
+    "testIdentifier" : "DemonicGraphAudiolyzerUITests/testMainAreasAreReachable()",
+    "testIdentifierURL" : "test://com.apple.xcode/DemonicGraphAudiolyzer/DemonicGraphAudiolyzerUITests/DemonicGraphAudiolyzerUITests/testMainAreasAreReachable"
+  },
+  {
+    "attachments" : [
+      {
+        "arguments" : [
+          "1",
+          "1"
+        ],
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "CB15797E-6053-40B1-BB72-7F30D005A4F2",
+        "deviceName" : "iPhone Air",
+        "exportedFileName" : "F1280EC8-8D67-4D18-BBD4-578D9E386B80.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Startbildschirm Graph & Klang_0_4ABDB9CD-E5DD-4039-B95D-03FA43478EF2.png",
+        "timestamp" : 1791905240.707
+      },
+      {
+        "arguments" : [
+          "1",
+          "4"
+        ],
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "CB15797E-6053-40B1-BB72-7F30D005A4F2",
+        "deviceName" : "iPhone Air",
+        "exportedFileName" : "9C192C39-8E42-49DE-BEE8-344312A19FE1.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Startbildschirm Graph & Klang_0_2B10973E-3EE4-457C-937D-33B8EEB514E0.png",
+        "timestamp" : 1791905251.787
+      },
+      {
+        "arguments" : [
+          "1",
+          "2"
+        ],
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "CB15797E-6053-40B1-BB72-7F30D005A4F2",
+        "deviceName" : "iPhone Air",
+        "exportedFileName" : "4F2A996A-B434-4362-A43C-3C0CB70B8294.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Startbildschirm Graph & Klang_0_146A952F-286B-46BD-BBAC-B83FA9356D81.png",
+        "timestamp" : 1791905264.437
+      },
+      {
+        "arguments" : [
+          "2",
+          "4"
+        ],
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "CB15797E-6053-40B1-BB72-7F30D005A4F2",
+        "deviceName" : "iPhone Air",
+        "exportedFileName" : "F3A1AE3C-A733-4EB5-BF16-FBE5C49D6346.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Startbildschirm Graph & Klang_0_3053F31A-1DF5-40F6-BF1F-D4BAF30558C0.png",
+        "timestamp" : 1791905274.731
+      }
+    ],
+    "testIdentifier" : "DemonicGraphAudiolyzerUITestsLaunchTests/testLaunch",
+    "testIdentifierURL" : "test://com.apple.xcode/DemonicGraphAudiolyzer/DemonicGraphAudiolyzerUITests/DemonicGraphAudiolyzerUITestsLaunchTests/testLaunch"
+  }
+]
