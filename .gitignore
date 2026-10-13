@@ -1,0 +1,9 @@
+# Xcode / SwiftPM build products
+build/
+DerivedData/
+.build/
+.swiftpm/
+*.xcresult
+Packages/LameKit/.build/
+Packages/LameKit/.swiftpm/
+.DS_Store
