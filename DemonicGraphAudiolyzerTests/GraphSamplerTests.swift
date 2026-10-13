@@ -52,6 +52,22 @@ struct GraphSamplerTests {
         }
     }
 
+    @Test("Viele kleine Stufen werden auch ohne vorgegebenen Sichtbereich getrennt",
+          arguments: [(-6.6...6.6, 14), (-20.5...20.5, 42), (-0.5...30.5, 32)])
+    func manySmallSteps(range: ClosedRange<Double>, pieces: Int) throws {
+        let f = try compiled("floor(x)")
+        let curve = GraphSampler.sample({ f($0) }, over: range)
+        #expect(curve.segments.count == pieces)
+        for segment in curve.segments {
+            #expect(Set(segment.points.map(\.y)).count == 1, "Kein senkrechter Verbindungsstrich")
+        }
+        // Smooth functions must stay in one piece.
+        for text in ["sin(x)", "x^3 - 4x", "exp(x/5)", "abs(x)", "sqrt(abs(x))", "sin(4*x)exp(-0.2abs(x))"] {
+            let g = try compiled(text)
+            #expect(GraphSampler.sample({ g($0) }, over: range).segments.count == 1, "\(text)")
+        }
+    }
+
     @Test("Definitionsränder werden genau gefunden")
     func domainEdges() throws {
         let f = try compiled("sqrt(x)")

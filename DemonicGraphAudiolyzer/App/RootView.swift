@@ -50,6 +50,14 @@ struct RootView: View {
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 DemonTabBar(selection: selectedTab)
+                    .background(alignment: .bottom) {
+                        // Hides scrolled content below and behind the floating tab bar.
+                        LinearGradient(colors: [DemonTheme.void.opacity(0), DemonTheme.void.opacity(0.94), DemonTheme.void],
+                                       startPoint: .top, endPoint: .bottom)
+                            .padding(.top, -28)
+                            .ignoresSafeArea(edges: .bottom)
+                            .allowsHitTesting(false)
+                    }
             }
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)

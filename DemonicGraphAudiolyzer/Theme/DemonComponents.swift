@@ -176,8 +176,12 @@ struct DemonSectionHeader: View {
                 .font(.footnote.weight(.heavy))
                 .tracking(1.3)
                 .foregroundStyle(DemonTheme.blurpleText)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+                .layoutPriority(1)
             Rectangle()
                 .fill(LinearGradient(colors: [DemonTheme.metalMid.opacity(0.7), .clear], startPoint: .leading, endPoint: .trailing))
+                .frame(minWidth: 12, maxWidth: .infinity)
                 .frame(height: 1)
         }
         .accessibilityElement(children: .ignore)

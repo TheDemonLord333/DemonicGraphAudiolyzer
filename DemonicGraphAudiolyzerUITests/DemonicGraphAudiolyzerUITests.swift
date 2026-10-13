@@ -28,7 +28,7 @@ final class DemonicGraphAudiolyzerUITests: XCTestCase {
 
     /// Keeps a screenshot in the test report (design review of all main views).
     private func screenshot(_ name: String) {
-        let attachment = XCTAttachment(screenshot: app.screenshot())
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
@@ -94,6 +94,12 @@ final class DemonicGraphAudiolyzerUITests: XCTestCase {
         XCTAssertTrue(waitForStatus("Bereit"))
         screenshot("01 Graph angezeigt")
 
+        // Repeat on, so the pass is still running when the (slow) UI automation pauses it.
+        let loop = app.buttons["loopButton"]
+        bringIntoView(loop)
+        loop.tap()
+        XCTAssertEqual(loop.value as? String, "ein")
+
         // Play
         let play = app.buttons["playButton"]
         XCTAssertTrue(play.waitForExistence(timeout: 5))
@@ -144,6 +150,7 @@ final class DemonicGraphAudiolyzerUITests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.textFields["formulaField"].waitForExistence(timeout: 15))
         XCUIDevice.shared.orientation = .landscapeLeft
+        Thread.sleep(forTimeInterval: 1.5)
         let graph = element("graphCanvas")
         XCTAssertTrue(graph.waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["playButton"].waitForExistence(timeout: 5))

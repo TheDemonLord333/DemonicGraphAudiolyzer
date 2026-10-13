@@ -74,7 +74,8 @@ enum GraphSampler {
         var height = reference.upperBound - reference.lowerBound
         if !(height > 0) || !height.isFinite { height = 1 }
         let band = Band(low: reference.lowerBound - height, high: reference.upperBound + height,
-                        threshold: height * options.jumpFraction)
+                        threshold: height * options.jumpFraction,
+                        minimumJump: height * 0.002)
 
         var builder = SegmentBuilder()
         var budget = options.maximumExtraPoints
@@ -91,8 +92,21 @@ enum GraphSampler {
             let previousY = ys[index - 1]
             switch (previousY.isNaN, y.isNaN) {
             case (false, false):
-                if band.needsRefinement(previousY, y) {
-                    refine(function, x0: previousX, y0: previousY, x1: x, y1: y, band: band,
+                let jump = abs(y - previousY)
+                var threshold = band.threshold
+                if jump <= threshold, jump > band.minimumJump {
+                    // Small steps (e.g. floor(x) with many steps) are found relative to the
+                    // neighbouring differences: a smooth curve changes its slope gradually.
+                    let before = index >= 2 && !ys[index - 2].isNaN ? abs(previousY - ys[index - 2]) : 0
+                    let after = index < count && !ys[index + 1].isNaN ? abs(ys[index + 1] - y) : 0
+                    if jump > 4 * max(before, after) {
+                        // A real jump keeps (almost) its full size in one half at every bisection
+                        // level, a continuous slope halves – 75 % separates both cases.
+                        threshold = 0.75 * jump
+                    }
+                }
+                if band.needsRefinement(previousY, y, threshold: threshold) {
+                    refine(function, x0: previousX, y0: previousY, x1: x, y1: y, band: band, threshold: threshold,
                            minimumWidth: minimumWidth, depth: 0, maximumDepth: options.maximumDepth,
                            budget: &budget, builder: &builder)
                 }
@@ -131,7 +145,7 @@ enum GraphSampler {
     /// Appends intermediate points (exclusive of both ends) or splits the segment.
     private static func refine(_ function: (Double) -> Double,
                                x0: Double, y0: Double, x1: Double, y1: Double,
-                               band: Band, minimumWidth: Double,
+                               band: Band, threshold: Double, minimumWidth: Double,
                                depth: Int, maximumDepth: Int,
                                budget: inout Int, builder: inout SegmentBuilder) {
         if budget <= 0 { return }  // pathological functions: just connect
@@ -154,13 +168,13 @@ enum GraphSampler {
             }
             return
         }
-        if band.needsRefinement(y0, ym) {
-            refine(function, x0: x0, y0: y0, x1: xm, y1: ym, band: band, minimumWidth: minimumWidth,
+        if band.needsRefinement(y0, ym, threshold: threshold) {
+            refine(function, x0: x0, y0: y0, x1: xm, y1: ym, band: band, threshold: threshold, minimumWidth: minimumWidth,
                    depth: depth + 1, maximumDepth: maximumDepth, budget: &budget, builder: &builder)
         }
         builder.add(GraphPoint(x: xm, y: ym))
-        if band.needsRefinement(ym, y1) {
-            refine(function, x0: xm, y0: ym, x1: x1, y1: y1, band: band, minimumWidth: minimumWidth,
+        if band.needsRefinement(ym, y1, threshold: threshold) {
+            refine(function, x0: xm, y0: ym, x1: x1, y1: y1, band: band, threshold: threshold, minimumWidth: minimumWidth,
                    depth: depth + 1, maximumDepth: maximumDepth, budget: &budget, builder: &builder)
         }
     }
@@ -191,10 +205,13 @@ enum GraphSampler {
 private struct Band {
     var low: Double
     var high: Double
+    /// Jumps larger than this (absolute) are always inspected.
     var threshold: Double
+    /// Differences below this are never treated as jumps (≈ 0.5 px).
+    var minimumJump: Double
 
     @inline(__always)
-    func needsRefinement(_ a: Double, _ b: Double) -> Bool {
+    func needsRefinement(_ a: Double, _ b: Double, threshold: Double) -> Bool {
         if abs(b - a) <= threshold { return false }
         if a > high && b > high { return false }
         if a < low && b < low { return false }
