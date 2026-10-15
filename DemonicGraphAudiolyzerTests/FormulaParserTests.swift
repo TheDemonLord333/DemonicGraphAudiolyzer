@@ -161,6 +161,16 @@ struct FormulaParserTests {
         #expect(error(String(repeating: "x+", count: 300) + "x")?.kind == .tooLong)
     }
 
+    @Test("Anzeige der Formel: vollständiger Ausdruck ohne Präfix, auch mit Funktionsaufruf am Ende")
+    func displayBody() throws {
+        #expect(try parse("floor(x)").displayBody == "floor(x)")
+        #expect(try parse("y = sin(x)*2").displayBody == "sin(x)*2")
+        #expect(try parse("f(x) = max(x, 1)").displayBody == "max(x, 1)")
+        #expect(try parse("(x+1)(x-1)").displayBody == "(x+1)(x-1)")
+        #expect(try parse("sin(4*x)exp(-0.2abs(x))").displayBody == "sin(4*x)exp(-0.2abs(x))")
+        #expect(try parse("k = 2\nsin(k*x)").displayBody == "sin(k*x)")
+    }
+
     @Test("Fehlermeldungen sind deutsch und nennen die Position")
     func errorSummary() {
         let summary = error("sin(x")?.localizedSummary ?? ""

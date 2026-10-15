@@ -38,10 +38,12 @@ struct ParsedFormula: Equatable, Sendable {
         guard let output = program.outputStatement else {
             return source.trimmingCharacters(in: .whitespacesAndNewlines)
         }
+        // From the start of the output expression to the end of its line: the ranges of calls
+        // cover name and arguments only, so the closing parenthesis would otherwise be lost.
         let characters = Array(source)
-        let range = output.expression.range
-        let start = max(0, min(range.start, characters.count))
-        let end = max(start, min(range.end, characters.count))
+        let start = max(0, min(output.expression.range.start, characters.count))
+        var end = start
+        while end < characters.count, characters[end] != "\n" { end += 1 }
         let text = String(characters[start..<end]).trimmingCharacters(in: .whitespacesAndNewlines)
         return text.isEmpty ? source : text
     }

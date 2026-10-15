@@ -176,6 +176,7 @@ final class DemonicGraphAudiolyzerUITests: XCTestCase {
         app.buttons["tab-presets"].tap()
         XCTAssertTrue(app.buttons["loadPreset-Stufen"].waitForExistence(timeout: 5))
         screenshot("07 Presets")
+        bringIntoView(app.buttons["loadPreset-Stufen"])
         app.buttons["loadPreset-Stufen"].tap()
         XCTAssertTrue(element("graphCanvas").waitForExistence(timeout: 5))
         XCTAssertTrue(element("graphCanvas").label.contains("floor(x)"))
