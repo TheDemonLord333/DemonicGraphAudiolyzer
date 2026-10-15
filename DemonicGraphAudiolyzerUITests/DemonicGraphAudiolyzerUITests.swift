@@ -191,4 +191,99 @@ final class DemonicGraphAudiolyzerUITests: XCTestCase {
             screenshot("10 Exportdialog")
         }
     }
+
+    /// Synthesizer and pendulum mode: select the mode, see the multi-lane graph, play and stop.
+    @MainActor
+    func testSynthesizerAndPendulumModes() throws {
+        app.launch()
+        let synth = app.buttons["mode-synthesizer"]
+        XCTAssertTrue(synth.waitForExistence(timeout: 15), "Modusauswahl fehlt")
+        synth.tap()
+        XCTAssertTrue(element("synthGraph").waitForExistence(timeout: 10), "Mehrspur-Graph fehlt")
+        XCTAssertTrue(waitForStatus("Bereit", timeout: 15), "Synthesizer-Projekt wird nicht bereit")
+        screenshot("11 Formel-Synthesizer")
+
+        let play = app.buttons["playButton"]
+        bringIntoView(play)
+        play.tap()
+        let playing = waitForStatus("Wiedergabe", timeout: 20)
+        if !playing, element("transportStatus").label.contains("Fehler") {
+            throw XCTSkip("Keine Audioausgabe in dieser Umgebung verfügbar")
+        }
+        XCTAssertTrue(playing, "Synthesizer-Wiedergabe startet nicht")
+        Thread.sleep(forTimeInterval: 1.5)
+        screenshot("12 Synthesizer-Wiedergabe")
+        bringIntoView(app.buttons["stopButton"])
+        app.buttons["stopButton"].tap()
+        XCTAssertTrue(waitForStatus("Bereit"), "Stoppen funktioniert nicht")
+
+        // Voice editor: expand the first voice and look at the pitch editor.
+        let expand = app.buttons["expandVoice-0"]
+        bringIntoView(expand)
+        if expand.waitForExistence(timeout: 5) {
+            expand.tap()
+            let pitch = app.buttons["voiceSection-pitch-0"]
+            if pitch.waitForExistence(timeout: 5) {
+                bringIntoView(pitch)
+                pitch.tap()
+                XCTAssertTrue(element("pitchUnit").waitForExistence(timeout: 5), "Einheit der Tonhöhe fehlt")
+                screenshot("13 Stimmeneditor Tonhöhe")
+            }
+        }
+
+        // Pendulum mode
+        let modeArea = app.buttons["mode-pendulum"]
+        for _ in 0..<8 where !modeArea.isHittable {
+            let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.985, dy: 0.3))
+            start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: 400)))
+        }
+        modeArea.tap()
+        XCTAssertTrue(element("pendulumStage").waitForExistence(timeout: 10), "Pendelansicht fehlt")
+        XCTAssertTrue(waitForStatus("Bereit", timeout: 15))
+        bringIntoView(app.buttons["playButton"])
+        app.buttons["playButton"].tap()
+        if waitForStatus("Wiedergabe", timeout: 20) {
+            Thread.sleep(forTimeInterval: 2)
+            screenshot("14 Pendel")
+            bringIntoView(app.buttons["stopButton"])
+            app.buttons["stopButton"].tap()
+            XCTAssertTrue(waitForStatus("Bereit"))
+        }
+    }
+
+    /// Guide: search "Summe", open the Σ entry with its diagram, open an example in the editor.
+    @MainActor
+    func testGuideSearchAndOpenInEditor() throws {
+        app.launch()
+        let tab = app.buttons["tab-guides"]
+        XCTAssertTrue(tab.waitForExistence(timeout: 15), "Tab Anleitungen fehlt")
+        tab.tap()
+        let search = app.textFields["guideSearch"]
+        XCTAssertTrue(search.waitForExistence(timeout: 5), "Suchfeld fehlt")
+        screenshot("15 Anleitungen")
+        search.tap()
+        search.typeText("Summe")
+        let sumEntry = element("guideEntry-function-sum")
+        XCTAssertTrue(sumEntry.waitForExistence(timeout: 5), "Eintrag Summe wird nicht gefunden")
+        sumEntry.tap()
+        XCTAssertTrue(element("guideDiagram").waitForExistence(timeout: 5), "Σ-Diagramm fehlt")
+        XCTAssertTrue(element("guideSyntax").exists, "Exakte Eingabe fehlt")
+        screenshot("16 Anleitung Summe")
+
+        let open = app.buttons["openExample-0"]
+        for _ in 0..<8 where !open.isHittable {
+            let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
+            start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -260)))
+        }
+        XCTAssertTrue(open.exists, "„Im Editor öffnen“ fehlt")
+        open.tap()
+        if app.buttons["confirmReplace"].waitForExistence(timeout: 2) {
+            app.buttons["confirmReplace"].tap()
+        }
+        let field = app.textFields["formulaField"]
+        XCTAssertTrue(field.waitForExistence(timeout: 10), "Editor wurde nicht geöffnet")
+        XCTAssertTrue((field.value as? String ?? "").contains("sum"), "Beispiel nicht im Editor: \(field.value as? String ?? "")")
+        screenshot("17 Beispiel im Editor")
+    }
 }
+

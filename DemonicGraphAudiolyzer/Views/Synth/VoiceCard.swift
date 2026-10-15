@@ -343,7 +343,7 @@ struct VoiceSoundSection: View {
                                error: model.issues(voiceID: voice.id, field: .signal).first?.error,
                                advanced: $voice.useAdvancedEditor,
                                outputLabel: "Signal",
-                               liveCase: { model.liveActiveCase(voiceID: voice.id, role: .signal) },
+                               liveCase: model.phase == .playing ? { model.liveActiveCase(voiceID: voice.id, role: .signal) } : nil,
                                fieldIdentifier: "signalField",
                                onHelp: { topic in model.showGuide(topic: topic ?? "topic-signal") })
             if isPeriodic {
@@ -427,7 +427,7 @@ struct VoicePitchSection: View {
                                    error: model.issues(voiceID: voice.id, field: .pitch).first?.error,
                                    advanced: $voice.useAdvancedEditor,
                                    outputLabel: outputLabel,
-                                   liveCase: { model.liveActiveCase(voiceID: voice.id, role: .pitch) },
+                                   liveCase: model.phase == .playing ? { model.liveActiveCase(voiceID: voice.id, role: .pitch) } : nil,
                                    fieldIdentifier: "pitchField",
                                    onHelp: { topic in model.showGuide(topic: topic ?? "topic-pitch-units") })
                 switch voice.pitch.unit {
@@ -500,7 +500,7 @@ struct VoiceAmplitudeSection: View {
                                error: model.issues(voiceID: voice.id, field: .amplitude).first?.error,
                                advanced: $voice.useAdvancedEditor,
                                outputLabel: "A",
-                               liveCase: { model.liveActiveCase(voiceID: voice.id, role: .amplitude) },
+                               liveCase: model.phase == .playing ? { model.liveActiveCase(voiceID: voice.id, role: .amplitude) } : nil,
                                fieldIdentifier: "amplitudeField",
                                onHelp: { topic in model.showGuide(topic: topic ?? "topic-amplitude") })
             DemonCaption("Typische Hüllkurve: exp(-4*localTime) klingt nach jedem Auslösen ab. localTime ist die Zeit seit dem letzten Ereignis der Stimme.")
