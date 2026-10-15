@@ -196,7 +196,9 @@ Funktions-, Operator- und Variableneinträge werden aus denselben Katalogen erze
 | Grenze | Wert |
 |---|---|
 | Formeltext | 4 000 Zeichen, 80 Zeilen, 500 Zeichen pro Zeile |
-| Schachtelung | 64 Ebenen |
+| Schachtelung beim Parsen | 64 Ebenen aus Klammern, Funktionsaufrufen, Vorzeichen, `not` und Potenzen |
+| Höhe des Ausdrucksbaums | 160 Ebenen (nach dem Einsetzen von Zwischenwerten und Hilfsfunktionen, ohne Rekursion geprüft) |
+| Ineinander eingesetzte Hilfsfunktionen | 32 Ebenen |
 | Listen | 1 024 Einträge |
 | Σ/Π | 10 000 Durchläufe pro Schleife, 200 000 pro Auswertung (verschachtelt zusammen) – darüber Definitionslücke statt Hänger |
 | Ausdrucksbaum nach Einsetzen der Hilfsfunktionen | 20 000 Knoten |
@@ -205,6 +207,8 @@ Funktions-, Operator- und Variableneinträge werden aus denselben Katalogen erze
 | Durchlauf | 120 s |
 
 Formeln werden nur geparst und ausgewertet – keine Codeausführung, kein `eval`, kein Netzwerk.
+
+Die Tiefengrenzen schützen vor Stapelüberläufen: iOS führt Hintergrundarbeit auf Threads mit 512 KB Stack aus. Parser, Binder und Compiler halten ihre rekursiven Stack-Frames bewusst klein (Token-Kennungen ohne Nutzlast, Fehlermeldungen außerhalb der Rekursion). Ein Test führt die ungünstigsten zulässigen Formeln in einem Debug-Build auf einem Thread mit genau 512 KB Stack aus.
 
 ## Audiowiedergabe
 

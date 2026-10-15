@@ -35,6 +35,11 @@ struct FormulaBinder {
     /// Definitions and functions currently being resolved (cycle detection).
     private var resolving: [String] = []
     private var scopes: [[String: FormulaNode]] = []
+    /// Current recursion depth of `resolveNumber` (bounded, see `FormulaLimits.maximumDepth`).
+    private var nesting = 0
+    /// Helper functions currently being inlined into each other.
+    private var inlineDepth = 0
+    static let maximumInlineDepth = 32
 
     private init(environment: FormulaEnvironment, fixedVariables: Set<FormulaVariable>, autoParameterValues: [String: Double]) {
         self.environment = environment
@@ -127,6 +132,23 @@ struct FormulaBinder {
             for dependency in referencedDefinitions(in: tree) {
                 total[dependency, default: 0] += occurrences(of: dependency, in: tree) * (inline[name]! ? max(count, 1) : 1)
             }
+        }
+
+        // Height after inlining, computed without recursion before the recursive passes run.
+        var inlinedHeight: [Int: Int] = [:]
+        for name in order where inline[name] == true {
+            let height = definitionTrees[name]!.height { inlinedHeight[$0] ?? 1 }
+            inlinedHeight[definitionSlots[name]!] = height
+        }
+        var boundCount = 0
+        var tallest = outputTree.height { inlinedHeight[$0] ?? 1 }
+        for name in order where inline[name] == false {
+            boundCount += 1
+            tallest = max(tallest, definitionTrees[name]!.height { inlinedHeight[$0] ?? 1 })
+        }
+        if boundCount + tallest > FormulaLimits.maximumDepth {
+            throw Self.depthError(range: output.expression.range, line: main.program.lineCount > 1 ? output.line : nil,
+                                  sourceName: main.sourceName)
         }
 
         var root = materialize(outputTree, inline: inline)
@@ -421,28 +443,83 @@ struct FormulaBinder {
     }
 
     private mutating func resolveNumber(_ expression: SyntaxExpression) throws -> FormulaNode {
-        switch expression {
-        case .number(let value, _):
-            return .number(value)
-        case .name(let reference, let spelling, let range):
-            return try resolveName(reference, spelling: spelling, range: range)
-        case .negate(let operand, _):
-            return .negate(try resolveNumber(operand))
-        case .not(let operand, _):
-            return .not(try resolveNumber(operand))
-        case .binary(let op, let lhs, let rhs, _, _):
-            return .binary(op, try resolveNumber(lhs), try resolveNumber(rhs))
-        case .group(let inner, _):
-            return try resolveNumber(inner)
-        case .call(let reference, let spelling, let arguments, let range):
-            return try resolveCall(reference, spelling: spelling, arguments: arguments, range: range)
-        case .list(_, let range):
-            throw FormulaError(kind: .typeMismatch, message: "Eine Liste kann nicht direkt verrechnet werden.", range: range,
-                               hint: "Greife mit [index] auf ein Element zu, z. B. [0, 3, 7][i].")
-        case .index(let base, let index, _):
-            let elements = try resolveList(base)
-            return .element(elements, index: try resolveNumber(index))
+        nesting += 1
+        defer { nesting -= 1 }
+        if nesting > FormulaLimits.maximumDepth {
+            throw Self.depthError(range: expression.range)
         }
+        return try resolveSyntax(expression)
+    }
+
+    @inline(never)
+    static func depthError(range: SourceRange?, line: Int? = nil, sourceName: String? = nil) -> FormulaError {
+        FormulaError(kind: .tooComplex,
+                     message: "Die Formel ist zu tief verschachtelt (mehr als \(FormulaLimits.maximumDepth) Ebenen, z. B. durch sehr lange Ketten oder ineinander eingesetzte Hilfsfunktionen).",
+                     range: range,
+                     hint: "Teile sie mit Zwischenwerten auf oder verwende sum(…) für lange Summen.",
+                     line: line, sourceName: sourceName)
+    }
+
+    /// Lean dispatcher (no payload bindings): the recursion keeps small frames in debug builds.
+    private mutating func resolveSyntax(_ expression: SyntaxExpression) throws -> FormulaNode {
+        switch expression {
+        case .number(let value, _): return .number(value)
+        case .name: return try resolveNameExpression(expression)
+        case .negate, .not: return try resolveUnaryExpression(expression)
+        case .binary: return try resolveBinaryExpression(expression)
+        case .group: return try resolveGroupExpression(expression)
+        case .call: return try resolveCallExpression(expression)
+        case .list: throw Self.listArithmeticError(expression.range)
+        case .index: return try resolveIndexExpression(expression)
+        }
+    }
+
+    @inline(never)
+    private mutating func resolveNameExpression(_ expression: SyntaxExpression) throws -> FormulaNode {
+        guard case .name(let reference, let spelling, let range) = expression else { preconditionFailure("not a name") }
+        return try resolveName(reference, spelling: spelling, range: range)
+    }
+
+    @inline(never)
+    private mutating func resolveUnaryExpression(_ expression: SyntaxExpression) throws -> FormulaNode {
+        switch expression {
+        case .negate(let operand, _): return .negate(try resolveNumber(operand))
+        case .not(let operand, _): return .not(try resolveNumber(operand))
+        default: preconditionFailure("not unary")
+        }
+    }
+
+    @inline(never)
+    private mutating func resolveBinaryExpression(_ expression: SyntaxExpression) throws -> FormulaNode {
+        guard case .binary(let op, let lhs, let rhs, _, _) = expression else { preconditionFailure("not binary") }
+        let left = try resolveNumber(lhs)
+        let right = try resolveNumber(rhs)
+        return .binary(op, left, right)
+    }
+
+    @inline(never)
+    private mutating func resolveGroupExpression(_ expression: SyntaxExpression) throws -> FormulaNode {
+        guard case .group(let inner, _) = expression else { preconditionFailure("not a group") }
+        return try resolveNumber(inner)
+    }
+
+    @inline(never)
+    private mutating func resolveCallExpression(_ expression: SyntaxExpression) throws -> FormulaNode {
+        guard case .call(let reference, let spelling, let arguments, let range) = expression else { preconditionFailure("not a call") }
+        return try resolveCall(reference, spelling: spelling, arguments: arguments, range: range)
+    }
+
+    @inline(never)
+    private mutating func resolveIndexExpression(_ expression: SyntaxExpression) throws -> FormulaNode {
+        guard case .index(let base, let index, _) = expression else { preconditionFailure("not an index") }
+        let elements = try resolveList(base)
+        return .element(elements, index: try resolveNumber(index))
+    }
+
+    @inline(never)
+    private static func listArithmeticError(_ range: SourceRange) -> FormulaError {
+        FormulaError(kind: .typeMismatch, message: "Eine Liste kann nicht direkt verrechnet werden.", range: range,
+                     hint: "Greife mit [index] auf ein Element zu, z. B. [0, 3, 7][i].")
     }
 
     private mutating func resolveName(_ reference: NameReference, spelling: String, range: SourceRange) throws -> FormulaNode {
@@ -455,34 +532,65 @@ struct FormulaBinder {
             for scope in scopes.reversed() {
                 if let node = scope[name] { return node }
             }
-            throw FormulaError(kind: .unknownName, message: "„\(name)“ ist hier nicht definiert.", range: range,
-                               hint: "Eine Laufvariable gilt nur im Ausdruck (4. Argument) ihrer Summe bzw. ihres Produkts.")
+            throw Self.nameError(.localOutOfScope, name: name, range: range)
         case .autoParameter(let name):
             return .number(autoParameterValues[name] ?? 1)
         case .definition(let name):
-            guard let definition = definitions[name] else {
-                throw FormulaError(kind: .unknownName, message: "Unbekannter Name „\(name)“.", range: range, hint: nil)
-            }
-            switch definition.statement.kind {
-            case .value:
-                if definition.statement.isList {
-                    throw FormulaError(kind: .typeMismatch, message: "„\(name)“ ist eine Liste.", range: range,
-                                       hint: "Verwende \(name)[i] für ein Element oder len(\(name)) für die Länge.")
-                }
-                if resolving.contains(name) {
-                    throw cycleError(name, definition: definition)
-                }
-                _ = try valueTree(name)
-                return .local(slot(forDefinition: name))
-            case .function:
-                throw FormulaError(kind: .functionNeedsParenthesis, message: "Die Hilfsfunktion „\(name)“ braucht Argumente in Klammern.",
-                                   range: range, hint: "Schreibe z. B. \(name)(x).")
-            case .output:
-                throw FormulaError(kind: .unknownName, message: "Unbekannter Name „\(name)“.", range: range, hint: nil)
-            }
+            return try resolveDefinitionReference(name, range: range)
         case .function(let id):
-            throw FormulaError(kind: .functionNeedsParenthesis, message: "Nach „\(id)“ wird eine Klammer erwartet.", range: range,
-                               hint: "Schreibe z. B. \(id)(x).")
+            throw Self.nameError(.functionWithoutParenthesis, name: id, range: range)
+        }
+    }
+
+    /// A value definition used in an expression: resolved once, referenced by its slot.
+    @inline(never)
+    private mutating func resolveDefinitionReference(_ name: String, range: SourceRange) throws -> FormulaNode {
+        guard let definition = definitions[name] else {
+            throw Self.nameError(.unknown, name: name, range: range)
+        }
+        switch definition.statement.kind {
+        case .value:
+            if definition.statement.isList {
+                throw Self.nameError(.listAsValue, name: name, range: range)
+            }
+            if resolving.contains(name) {
+                throw cycleError(name, definition: definition)
+            }
+            _ = try valueTree(name)
+            return .local(slot(forDefinition: name))
+        case .function:
+            throw Self.nameError(.helperWithoutParenthesis, name: name, range: range)
+        case .output:
+            throw Self.nameError(.unknown, name: name, range: range)
+        }
+    }
+
+    private enum NameProblem {
+        case unknown, localOutOfScope, listAsValue, helperWithoutParenthesis, functionWithoutParenthesis, notAFunction, notAList
+    }
+
+    @inline(never)
+    private static func nameError(_ problem: NameProblem, name: String, range: SourceRange) -> FormulaError {
+        switch problem {
+        case .unknown:
+            return FormulaError(kind: .unknownName, message: "Unbekannter Name „\(name)“.", range: range, hint: nil)
+        case .localOutOfScope:
+            return FormulaError(kind: .unknownName, message: "„\(name)“ ist hier nicht definiert.", range: range,
+                                hint: "Eine Laufvariable gilt nur im Ausdruck (4. Argument) ihrer Summe bzw. ihres Produkts.")
+        case .listAsValue:
+            return FormulaError(kind: .typeMismatch, message: "„\(name)“ ist eine Liste.", range: range,
+                                hint: "Verwende \(name)[i] für ein Element oder len(\(name)) für die Länge.")
+        case .helperWithoutParenthesis:
+            return FormulaError(kind: .functionNeedsParenthesis, message: "Die Hilfsfunktion „\(name)“ braucht Argumente in Klammern.",
+                                range: range, hint: "Schreibe z. B. \(name)(x).")
+        case .functionWithoutParenthesis:
+            return FormulaError(kind: .functionNeedsParenthesis, message: "Nach „\(name)“ wird eine Klammer erwartet.", range: range,
+                                hint: "Schreibe z. B. \(name)(x).")
+        case .notAFunction:
+            return FormulaError(kind: .unknownName, message: "„\(name)“ ist keine Funktion.", range: range, hint: nil)
+        case .notAList:
+            return FormulaError(kind: .typeMismatch, message: "„\(name)“ ist keine Liste.", range: range,
+                                hint: "Listen werden mit eckigen Klammern definiert: \(name) = [0, 3, 7].")
         }
     }
 
@@ -492,8 +600,7 @@ struct FormulaBinder {
             return try elements.map { try resolveNumber($0) }
         case .name(.definition(let name), _, let range):
             guard let definition = definitions[name], definition.statement.isList else {
-                throw FormulaError(kind: .typeMismatch, message: "„\(name)“ ist keine Liste.", range: range,
-                                   hint: "Listen werden mit eckigen Klammern definiert: \(name) = [0, 3, 7].")
+                throw Self.nameError(.notAList, name: name, range: range)
             }
             return try listTree(name)
         case .group(let inner, _):
@@ -507,43 +614,86 @@ struct FormulaBinder {
     private mutating func resolveCall(_ reference: NameReference, spelling: String, arguments: [SyntaxExpression], range: SourceRange) throws -> FormulaNode {
         switch reference {
         case .definition(let name):
-            let resolved = try arguments.map { try resolveNumber($0) }
+            var resolved: [FormulaNode] = []
+            for argument in arguments { resolved.append(try resolveNumber(argument)) }
             return try inlineCall(name, arguments: resolved, range: range)
         case .function(let id):
-            guard let spec = FormulaCatalog.function(named: id) else {
-                throw FormulaError(kind: .unknownName, message: "Unbekannte Funktion „\(spelling)“.", range: range, hint: nil)
+            guard let implementation = Self.implementation(of: id) else {
+                throw Self.nameError(.unknown, name: spelling, range: range)
             }
-            switch spec.implementation {
-            case .math(let function):
-                return .call(function, try arguments.map { try resolveNumber($0) })
-            case .special(.ifElse):
-                return .conditional(try resolveNumber(arguments[0]), try resolveNumber(arguments[1]), try resolveNumber(arguments[2]))
-            case .special(.piecewise):
-                return .piecewise(try arguments.map { try resolveNumber($0) })
-            case .special(.len):
-                return .number(Double(try resolveList(arguments[0]).count))
-            case .special(.sum), .special(.prod):
-                guard case .name(.local(let variable), _, _) = arguments[0] else {
-                    throw FormulaError(kind: .invalidArgument, message: "Das erste Argument muss der Name der Laufvariable sein.",
-                                       range: arguments[0].range, hint: "Syntax: \(spec.syntax).")
-                }
-                let start = try resolveNumber(arguments[1])
-                let end = try resolveNumber(arguments[2])
-                let loopSlot = allocateSlot()
-                scopes.append([variable: .local(loopSlot)])
-                defer { scopes.removeLast() }
-                let body = try resolveNumber(arguments[3])
-                return .aggregate(spec.implementation == .special(.sum) ? .sum : .prod,
-                                  local: loopSlot, start: start, end: end, body: body)
-            }
+            return try resolveBuiltinCall(implementation, id: id, arguments: arguments)
         default:
-            throw FormulaError(kind: .unknownName, message: "„\(spelling)“ ist keine Funktion.", range: range, hint: nil)
+            throw Self.nameError(.notAFunction, name: spelling, range: range)
         }
+    }
+
+    /// Implementation of a catalogue function (no large spec copies in recursive frames).
+    @inline(never)
+    private static func implementation(of id: String) -> FunctionImplementation? {
+        FormulaCatalog.function(named: id)?.implementation
+    }
+
+    @inline(never)
+    private mutating func resolveBuiltinCall(_ implementation: FunctionImplementation, id: String,
+                                             arguments: [SyntaxExpression]) throws -> FormulaNode {
+        switch implementation {
+        case .math(let function):
+            var resolved: [FormulaNode] = []
+            for argument in arguments { resolved.append(try resolveNumber(argument)) }
+            return .call(function, resolved)
+        case .special(.ifElse):
+            let condition = try resolveNumber(arguments[0])
+            let then = try resolveNumber(arguments[1])
+            let otherwise = try resolveNumber(arguments[2])
+            return .conditional(condition, then, otherwise)
+        case .special(.piecewise):
+            var resolved: [FormulaNode] = []
+            for argument in arguments { resolved.append(try resolveNumber(argument)) }
+            return .piecewise(resolved)
+        case .special(.len):
+            return .number(Double(try resolveList(arguments[0]).count))
+        case .special(.sum), .special(.prod):
+            return try resolveAggregate(isSum: implementation == .special(.sum), id: id, arguments: arguments)
+        }
+    }
+
+    @inline(never)
+    private mutating func resolveAggregate(isSum: Bool, id: String, arguments: [SyntaxExpression]) throws -> FormulaNode {
+        guard case .name(.local(let variable), _, _) = arguments[0] else {
+            throw FormulaError(kind: .invalidArgument, message: "Das erste Argument muss der Name der Laufvariable sein.",
+                               range: arguments[0].range, hint: "Syntax: \(FormulaCatalog.function(named: id)?.syntax ?? id).")
+        }
+        let start = try resolveNumber(arguments[1])
+        let end = try resolveNumber(arguments[2])
+        let loopSlot = allocateSlot()
+        scopes.append([variable: .local(loopSlot)])
+        defer { scopes.removeLast() }
+        let body = try resolveNumber(arguments[3])
+        return .aggregate(isSum ? .sum : .prod, local: loopSlot, start: start, end: end, body: body)
     }
 
     /// Inlines a helper function: parameters are substituted directly (simple arguments) or
     /// bound to fresh local slots.
     private mutating func inlineCall(_ name: String, arguments: [FormulaNode], range: SourceRange) throws -> FormulaNode {
+        let prepared = try prepareInline(name, arguments: arguments, range: range)
+        resolving.append(name)
+        inlineDepth += 1
+        let savedScopes = scopes
+        // The body sees its parameters and global names – not the caller's locals.
+        scopes = [prepared.scope]
+        defer {
+            scopes = savedScopes
+            inlineDepth -= 1
+            resolving.removeLast()
+        }
+        let body = try resolveInlinedBody(name)
+        return try finishInline(body, bindings: prepared.bindings, range: range)
+    }
+
+    /// Checks the call and builds the parameter scope (non-recursive part).
+    @inline(never)
+    private mutating func prepareInline(_ name: String, arguments: [FormulaNode], range: SourceRange) throws
+        -> (scope: [String: FormulaNode], bindings: [(Int, FormulaNode)]) {
         guard let definition = definitions[name], case .function(_, let parameters) = definition.statement.kind else {
             throw FormulaError(kind: .unknownName, message: "Unbekannte Funktion „\(name)“.", range: range, hint: nil)
         }
@@ -554,6 +704,11 @@ struct FormulaBinder {
         }
         if resolving.contains(name) {
             throw cycleError(name, definition: definition)
+        }
+        if inlineDepth >= Self.maximumInlineDepth {
+            throw FormulaError(kind: .tooComplex,
+                               message: "Hilfsfunktionen sind zu tief ineinander eingesetzt (höchstens \(Self.maximumInlineDepth) Ebenen).",
+                               range: range, hint: "Verwende Zwischenwerte statt immer weiter verschachtelter Hilfsfunktionen.")
         }
         var scope: [String: FormulaNode] = [:]
         var bindings: [(Int, FormulaNode)] = []
@@ -569,19 +724,25 @@ struct FormulaBinder {
                 scope[parameter] = .local(slot)
             }
         }
-        resolving.append(name)
-        let savedScopes = scopes
-        // The body sees its parameters and global names – not the caller's locals.
-        scopes = [scope]
-        defer {
-            scopes = savedScopes
-            resolving.removeLast()
-        }
-        var body = try located(definition.statement, definition.sourceName, definition.multiLine) {
+        return (scope, bindings)
+    }
+
+    @inline(never)
+    private mutating func resolveInlinedBody(_ name: String) throws -> FormulaNode {
+        let definition = definitions[name]!
+        return try located(definition.statement, definition.sourceName, definition.multiLine) {
             try $0.resolveNumber(definition.statement.expression)
         }
+    }
+
+    @inline(never)
+    private func finishInline(_ resolved: FormulaNode, bindings: [(Int, FormulaNode)], range: SourceRange) throws -> FormulaNode {
+        var body = resolved
         for (slot, value) in bindings.reversed() {
             body = .binding(local: slot, value: value, body: body)
+        }
+        if body.height() > FormulaLimits.maximumDepth {
+            throw Self.depthError(range: range)
         }
         return body
     }

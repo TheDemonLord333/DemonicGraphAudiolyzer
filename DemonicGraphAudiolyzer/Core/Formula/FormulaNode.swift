@@ -26,6 +26,10 @@ enum FormulaLimits {
     static let iterationsPerEvaluation = 200_000
     /// Nodes of the evaluable tree after inlining helper functions.
     static let maximumNodes = 20_000
+    /// Height of the evaluable tree (also bounds the recursion of the binder). Parsing,
+    /// compiling and evaluating recurse once per level; iOS runs background work on threads
+    /// with 512 KB of stack, so the height is limited.
+    static let maximumDepth = 160
 }
 
 /// Evaluable tree of a formula: names are resolved, helper functions inlined, definitions
@@ -190,6 +194,39 @@ indirect enum FormulaNode: Equatable, Sendable {
             inner.remove(slot)
             return value.freeLocals.union(inner)
         }
+    }
+
+    /// Direct sub-trees.
+    var children: [FormulaNode] {
+        switch self {
+        case .number, .variable, .local: return []
+        case .negate(let operand), .not(let operand): return [operand]
+        case .binary(_, let lhs, let rhs): return [lhs, rhs]
+        case .call(_, let arguments), .piecewise(let arguments): return arguments
+        case .conditional(let c, let a, let b): return [c, a, b]
+        case .aggregate(_, _, let start, let end, let body): return [start, end, body]
+        case .element(let elements, let index): return [index] + elements
+        case .binding(_, let value, let body): return [value, body]
+        }
+    }
+
+    /// Height of the tree, computed without recursion (safe for any input). `leafHeight` gives
+    /// the height that a local slot stands for (e.g. a definition that will be inlined).
+    func height(leafHeight: (Int) -> Int = { _ in 1 }) -> Int {
+        var maximum = 0
+        var stack: [(node: FormulaNode, above: Int)] = [(self, 0)]
+        while let (node, above) = stack.popLast() {
+            if case .local(let slot) = node {
+                maximum = Swift.max(maximum, above + leafHeight(slot))
+                continue
+            }
+            let level = above + 1
+            maximum = Swift.max(maximum, level)
+            for child in node.children {
+                stack.append((child, level))
+            }
+        }
+        return maximum
     }
 
     /// Pre-order traversal.

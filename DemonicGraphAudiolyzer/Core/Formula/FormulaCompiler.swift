@@ -105,141 +105,205 @@ private struct FormulaCompiler {
         return Built(evaluator: evaluator, constant: nil, freeLocals: freeLocals, usesInputs: usesInputs)
     }
 
+    /// Builds the closure of a node. A small dispatcher: every case lives in its own function,
+    /// so the recursion (one level per tree level) keeps small stack frames even in debug builds
+    /// and on threads with 512 KB of stack.
     mutating func build(_ node: FormulaNode) -> Built {
+        // The dispatcher binds no payloads: every case is extracted in its own small function.
+        switch node {
+        case .number, .variable, .local: return buildLeaf(node)
+        case .negate, .not: return buildUnary(node)
+        case .binary: return buildBinary(node)
+        case .call: return buildCall(node)
+        case .conditional: return buildConditional(node)
+        case .piecewise: return buildPiecewise(node)
+        case .aggregate: return buildAggregate(node)
+        case .element: return buildElement(node)
+        case .binding: return buildBinding(node)
+        }
+    }
+
+    @inline(never)
+    private func buildLeaf(_ node: FormulaNode) -> Built {
         switch node {
         case .number(let value):
             return Built(evaluator: Self.constant(value), constant: value, freeLocals: [], usesInputs: false)
-
         case .variable(let variable):
-            if let value = fixed[variable] {
-                return Built(evaluator: Self.constant(value), constant: value, freeLocals: [], usesInputs: false)
-            }
-            let slot = variable.slot
-            return Built(evaluator: { env in env[slot] }, constant: nil, freeLocals: [], usesInputs: true)
-
+            return buildVariable(variable)
         case .local(let local):
             let slot = CompiledProgram.localBase + local
             return Built(evaluator: { env in env[slot] }, constant: nil, freeLocals: [local], usesInputs: false)
+        default:
+            preconditionFailure("not a leaf")
+        }
+    }
 
-        case .negate(let operand):
-            let inner = build(operand)
-            let f = inner.evaluator
-            return finish({ env in -f(env) }, freeLocals: inner.freeLocals, usesInputs: inner.usesInputs)
+    @inline(never)
+    private mutating func buildUnary(_ node: FormulaNode) -> Built {
+        switch node {
+        case .negate(let operand): return buildNegate(operand)
+        case .not(let operand): return buildNot(operand)
+        default: preconditionFailure("not unary")
+        }
+    }
 
-        case .not(let operand):
-            let inner = build(operand)
-            let f = inner.evaluator
-            return finish({ env in MathSemantics.not(f(env)) }, freeLocals: inner.freeLocals, usesInputs: inner.usesInputs)
+    @inline(never)
+    private func buildVariable(_ variable: FormulaVariable) -> Built {
+        if let value = fixed[variable] {
+            return Built(evaluator: Self.constant(value), constant: value, freeLocals: [], usesInputs: false)
+        }
+        let slot = variable.slot
+        return Built(evaluator: { env in env[slot] }, constant: nil, freeLocals: [], usesInputs: true)
+    }
 
-        case .binary(let op, let lhs, let rhs):
-            let left = build(lhs)
-            let right = build(rhs)
-            let evaluator = Self.binary(op, left, right)
-            return finish(evaluator, freeLocals: left.freeLocals.union(right.freeLocals), usesInputs: left.usesInputs || right.usesInputs)
+    @inline(never)
+    private mutating func buildNegate(_ operand: FormulaNode) -> Built {
+        let inner = build(operand)
+        let f = inner.evaluator
+        return finish({ env in -f(env) }, freeLocals: inner.freeLocals, usesInputs: inner.usesInputs)
+    }
 
-        case .call(let function, let arguments):
-            let built = arguments.map { build($0) }
-            let evaluator = Self.call(function, built)
-            return finish(evaluator, freeLocals: built.reduce(into: Set<Int>()) { $0.formUnion($1.freeLocals) },
-                          usesInputs: built.contains(where: \.usesInputs))
+    @inline(never)
+    private mutating func buildNot(_ operand: FormulaNode) -> Built {
+        let inner = build(operand)
+        let f = inner.evaluator
+        return finish({ env in MathSemantics.not(f(env)) }, freeLocals: inner.freeLocals, usesInputs: inner.usesInputs)
+    }
 
-        case .conditional(let condition, let then, let otherwise):
-            let c = build(condition)
-            let a = build(then)
-            let b = build(otherwise)
-            if let value = c.constant {
-                // Constant condition: only the selected branch remains.
-                if value.isNaN { return Built(evaluator: Self.constant(.nan), constant: .nan, freeLocals: [], usesInputs: false) }
-                return value != 0 ? a : b
+    @inline(never)
+    private mutating func buildBinary(_ node: FormulaNode) -> Built {
+        guard case .binary(let op, let lhs, let rhs) = node else { preconditionFailure("not binary") }
+        let left = build(lhs)
+        let right = build(rhs)
+        let evaluator = Self.binary(op, left, right)
+        return finish(evaluator, freeLocals: left.freeLocals.union(right.freeLocals), usesInputs: left.usesInputs || right.usesInputs)
+    }
+
+    @inline(never)
+    private mutating func buildCall(_ node: FormulaNode) -> Built {
+        guard case .call(let function, let arguments) = node else { preconditionFailure("not a call") }
+        var built: [Built] = []
+        built.reserveCapacity(arguments.count)
+        for argument in arguments { built.append(build(argument)) }
+        let evaluator = Self.call(function, built)
+        return finish(evaluator, freeLocals: built.reduce(into: Set<Int>()) { $0.formUnion($1.freeLocals) },
+                      usesInputs: built.contains(where: \.usesInputs))
+    }
+
+    @inline(never)
+    private mutating func buildConditional(_ node: FormulaNode) -> Built {
+        guard case .conditional(let condition, let then, let otherwise) = node else { preconditionFailure("not conditional") }
+        let c = build(condition)
+        let a = build(then)
+        let b = build(otherwise)
+        if let value = c.constant {
+            // Constant condition: only the selected branch remains.
+            if value.isNaN { return Built(evaluator: Self.constant(.nan), constant: .nan, freeLocals: [], usesInputs: false) }
+            return value != 0 ? a : b
+        }
+        let cf = c.evaluator, af = a.evaluator, bf = b.evaluator
+        return finish({ env in
+            let value = cf(env)
+            if value.isNaN { return .nan }
+            return value != 0 ? af(env) : bf(env)
+        }, freeLocals: c.freeLocals.union(a.freeLocals).union(b.freeLocals), usesInputs: c.usesInputs || a.usesInputs || b.usesInputs)
+    }
+
+    @inline(never)
+    private mutating func buildPiecewise(_ node: FormulaNode) -> Built {
+        guard case .piecewise(let parts) = node else { preconditionFailure("not piecewise") }
+        var built: [Built] = []
+        built.reserveCapacity(parts.count)
+        for part in parts { built.append(build(part)) }
+        let conditions = stride(from: 0, to: built.count - 1, by: 2).map { built[$0].evaluator }
+        let values = stride(from: 1, to: built.count, by: 2).map { built[$0].evaluator }
+        let fallback = built[built.count - 1].evaluator
+        return finish({ env in
+            for index in 0..<conditions.count {
+                let condition = conditions[index](env)
+                if condition.isNaN { return .nan }
+                if condition != 0 { return values[index](env) }
             }
-            let cf = c.evaluator, af = a.evaluator, bf = b.evaluator
-            return finish({ env in
-                let value = cf(env)
-                if value.isNaN { return .nan }
-                return value != 0 ? af(env) : bf(env)
-            }, freeLocals: c.freeLocals.union(a.freeLocals).union(b.freeLocals), usesInputs: c.usesInputs || a.usesInputs || b.usesInputs)
+            return fallback(env)
+        }, freeLocals: built.reduce(into: Set<Int>()) { $0.formUnion($1.freeLocals) }, usesInputs: built.contains(where: \.usesInputs))
+    }
 
-        case .piecewise(let parts):
-            let built = parts.map { build($0) }
-            let conditions = stride(from: 0, to: built.count - 1, by: 2).map { built[$0].evaluator }
-            let values = stride(from: 1, to: built.count, by: 2).map { built[$0].evaluator }
-            let fallback = built[built.count - 1].evaluator
-            return finish({ env in
-                for index in 0..<conditions.count {
-                    let condition = conditions[index](env)
-                    if condition.isNaN { return .nan }
-                    if condition != 0 { return values[index](env) }
-                }
-                return fallback(env)
-            }, freeLocals: built.reduce(into: Set<Int>()) { $0.formUnion($1.freeLocals) }, usesInputs: built.contains(where: \.usesInputs))
-
-        case .aggregate(let kind, let local, let start, let end, let body):
-            let s = build(start)
-            let e = build(end)
-            let b = build(body)
-            let sf = s.evaluator, ef = e.evaluator, bf = b.evaluator
-            let slot = CompiledProgram.localBase + local
-            let budgetSlot = CompiledProgram.budgetSlot
-            let isSum = kind == .sum
-            var free = b.freeLocals
-            free.remove(local)
-            return finish({ env in
-                let initial: Double = isSum ? 0 : 1
-                let range: ClosedRange<Int>
-                switch MathSemantics.loopBounds(sf(env), ef(env)) {
-                case .undefined: return .nan
-                case .empty: return initial
-                case .range(let bounds): range = bounds
-                }
-                var accumulator = initial
-                for k in range {
-                    env[budgetSlot] -= 1
-                    if env[budgetSlot] < 0 { return .nan }
-                    env[slot] = Double(k)
-                    let value = bf(env)
-                    if isSum { accumulator += value } else { accumulator *= value }
-                }
-                return accumulator
-            }, freeLocals: s.freeLocals.union(e.freeLocals).union(free), usesInputs: s.usesInputs || e.usesInputs || b.usesInputs)
-
-        case .element(let elements, let index):
-            let built = elements.map { build($0) }
-            let i = build(index)
-            let evaluators = built.map(\.evaluator)
-            let indexEvaluator = i.evaluator
-            let count = evaluators.count
-            if let constantIndex = i.constant {
-                guard let position = MathSemantics.listIndex(constantIndex, count: count) else {
-                    return Built(evaluator: Self.constant(.nan), constant: .nan, freeLocals: [], usesInputs: false)
-                }
-                return built[position]
+    @inline(never)
+    private mutating func buildAggregate(_ node: FormulaNode) -> Built {
+        guard case .aggregate(let kind, let local, let start, let end, let body) = node else { preconditionFailure("not aggregate") }
+        let s = build(start)
+        let e = build(end)
+        let b = build(body)
+        let sf = s.evaluator, ef = e.evaluator, bf = b.evaluator
+        let slot = CompiledProgram.localBase + local
+        let budgetSlot = CompiledProgram.budgetSlot
+        let isSum = kind == .sum
+        var free = b.freeLocals
+        free.remove(local)
+        return finish({ env in
+            let initial: Double = isSum ? 0 : 1
+            let range: ClosedRange<Int>
+            switch MathSemantics.loopBounds(sf(env), ef(env)) {
+            case .undefined: return .nan
+            case .empty: return initial
+            case .range(let bounds): range = bounds
             }
-            let values = built.compactMap(\.constant)
-            if values.count == count {
-                // A list of numbers: plain array lookup.
-                return finish({ env in
-                    guard let position = MathSemantics.listIndex(indexEvaluator(env), count: count) else { return .nan }
-                    return values[position]
-                }, freeLocals: i.freeLocals, usesInputs: i.usesInputs)
+            var accumulator = initial
+            for k in range {
+                env[budgetSlot] -= 1
+                if env[budgetSlot] < 0 { return .nan }
+                env[slot] = Double(k)
+                let value = bf(env)
+                if isSum { accumulator += value } else { accumulator *= value }
             }
+            return accumulator
+        }, freeLocals: s.freeLocals.union(e.freeLocals).union(free), usesInputs: s.usesInputs || e.usesInputs || b.usesInputs)
+    }
+
+    @inline(never)
+    private mutating func buildElement(_ node: FormulaNode) -> Built {
+        guard case .element(let elements, let index) = node else { preconditionFailure("not an element") }
+        var built: [Built] = []
+        built.reserveCapacity(elements.count)
+        for element in elements { built.append(build(element)) }
+        let i = build(index)
+        let evaluators = built.map(\.evaluator)
+        let indexEvaluator = i.evaluator
+        let count = evaluators.count
+        if let constantIndex = i.constant {
+            guard let position = MathSemantics.listIndex(constantIndex, count: count) else {
+                return Built(evaluator: Self.constant(.nan), constant: .nan, freeLocals: [], usesInputs: false)
+            }
+            return built[position]
+        }
+        let values = built.compactMap(\.constant)
+        if values.count == count {
+            // A list of numbers: plain array lookup.
             return finish({ env in
                 guard let position = MathSemantics.listIndex(indexEvaluator(env), count: count) else { return .nan }
-                return evaluators[position](env)
-            }, freeLocals: built.reduce(into: i.freeLocals) { $0.formUnion($1.freeLocals) },
-               usesInputs: i.usesInputs || built.contains(where: \.usesInputs))
-
-        case .binding(let local, let value, let body):
-            let v = build(value)
-            let b = build(body)
-            let vf = v.evaluator, bf = b.evaluator
-            let slot = CompiledProgram.localBase + local
-            var free = b.freeLocals
-            free.remove(local)
-            return finish({ env in
-                env[slot] = vf(env)
-                return bf(env)
-            }, freeLocals: v.freeLocals.union(free), usesInputs: v.usesInputs || b.usesInputs)
+                return values[position]
+            }, freeLocals: i.freeLocals, usesInputs: i.usesInputs)
         }
+        return finish({ env in
+            guard let position = MathSemantics.listIndex(indexEvaluator(env), count: count) else { return .nan }
+            return evaluators[position](env)
+        }, freeLocals: built.reduce(into: i.freeLocals) { $0.formUnion($1.freeLocals) },
+           usesInputs: i.usesInputs || built.contains(where: \.usesInputs))
+    }
+
+    @inline(never)
+    private mutating func buildBinding(_ node: FormulaNode) -> Built {
+        guard case .binding(let local, let value, let body) = node else { preconditionFailure("not a binding") }
+        let v = build(value)
+        let b = build(body)
+        let vf = v.evaluator, bf = b.evaluator
+        let slot = CompiledProgram.localBase + local
+        var free = b.freeLocals
+        free.remove(local)
+        return finish({ env in
+            env[slot] = vf(env)
+            return bf(env)
+        }, freeLocals: v.freeLocals.union(free), usesInputs: v.usesInputs || b.usesInputs)
     }
 
     private static func binary(_ op: BinaryOperator, _ left: Built, _ right: Built) -> FormulaEvaluator {

@@ -31,7 +31,53 @@ enum TokenKind: Equatable, Sendable {
     case newline
     case end
     /// A word that could not be resolved; parsing it throws the stored error.
-    case invalid(FormulaError)
+    /// Indirect so that tokens stay small (parser frames are copied a lot in debug builds).
+    indirect case invalid(FormulaError)
+}
+
+/// Payload-free kind of a token for cheap checks in the recursive parser.
+enum TokenTag: UInt8, Sendable {
+    case number, word, name, and, or, not
+    case plus, minus, star, slash, caret
+    case less, lessEqual, greater, greaterEqual, equalEqual, notEqual
+    case leftParen, rightParen, leftBracket, rightBracket, comma, equals
+    case newline, end, invalid
+}
+
+extension TokenKind {
+    var tag: TokenTag {
+        switch self {
+        case .number: return .number
+        case .word: return .word
+        case .name: return .name
+        case .keyword(let keyword):
+            switch keyword {
+            case .and: return .and
+            case .or: return .or
+            case .not: return .not
+            }
+        case .plus: return .plus
+        case .minus: return .minus
+        case .star: return .star
+        case .slash: return .slash
+        case .caret: return .caret
+        case .less: return .less
+        case .lessEqual: return .lessEqual
+        case .greater: return .greater
+        case .greaterEqual: return .greaterEqual
+        case .equalEqual: return .equalEqual
+        case .notEqual: return .notEqual
+        case .leftParen: return .leftParen
+        case .rightParen: return .rightParen
+        case .leftBracket: return .leftBracket
+        case .rightBracket: return .rightBracket
+        case .comma: return .comma
+        case .equals: return .equals
+        case .newline: return .newline
+        case .end: return .end
+        case .invalid: return .invalid
+        }
+    }
 }
 
 struct FormulaToken: Equatable, Sendable {

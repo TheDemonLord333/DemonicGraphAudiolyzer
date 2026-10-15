@@ -297,6 +297,72 @@ struct FormulaParser {
         }
     }
 
+    /// Kind of the current token without copying its payload (keeps recursive frames small).
+    private mutating func currentTag() -> TokenTag {
+        expandWord(at: index)
+        return tokens[index].kind.tag
+    }
+
+    private mutating func currentRange() -> SourceRange {
+        expandWord(at: index)
+        return tokens[index].range
+    }
+
+    /// Enters one level of recursion (brackets, calls, unary chains, powers).
+    private mutating func enterLevel() throws {
+        depth += 1
+        if depth > Self.maximumNesting {
+            throw nestingError()
+        }
+    }
+
+    @inline(never)
+    private mutating func nestingError() -> FormulaError {
+        FormulaError(kind: .nestingTooDeep, message: "Die Formel ist zu tief verschachtelt.", range: currentRange(),
+                     hint: "Höchstens \(Self.maximumNesting) Ebenen aus Klammern, Funktionsaufrufen, Vorzeichen und Potenzen.")
+    }
+
+    @inline(never)
+    private mutating func currentUnexpectedTokenError() -> FormulaError {
+        unexpectedTokenError(current)
+    }
+
+    @inline(never)
+    private mutating func currentMissingOperandError() -> FormulaError {
+        missingOperandError(at: current)
+    }
+
+    @inline(never)
+    private static func comparisonChainError(_ range: SourceRange) -> FormulaError {
+        FormulaError(kind: .comparisonChain,
+                     message: "Vergleichsketten wie a < x < b werden nicht erraten.",
+                     range: range,
+                     hint: "Schreibe (a < x) and (x < b).")
+    }
+
+    @inline(never)
+    private static func missingOperatorBeforeNumberError(_ range: SourceRange) -> FormulaError {
+        FormulaError(kind: .missingOperator,
+                     message: "Vor dieser Zahl fehlt ein Operator.",
+                     range: range,
+                     hint: "Schreibe z. B. x*2 oder 2*3.")
+    }
+
+    @inline(never)
+    private static func indexTargetError(_ range: SourceRange) -> FormulaError {
+        FormulaError(kind: .typeMismatch, message: "Nur Listen können mit [ ] indiziert werden.", range: range,
+                     hint: "Beispiel: notes[2] oder [0, 3, 7][i].")
+    }
+
+    @inline(never)
+    private static func unclosedError(_ range: SourceRange, bracket: Bool) -> FormulaError {
+        bracket
+            ? FormulaError(kind: .missingClosingParenthesis, message: "Die eckige Klammer wird nicht geschlossen.",
+                           range: range, hint: "Ergänze „]“.")
+            : FormulaError(kind: .missingClosingParenthesis, message: "Die Klammer wird nicht geschlossen.",
+                           range: range, hint: "Ergänze „)“.")
+    }
+
     private mutating func peekKind(_ offset: Int) -> TokenKind {
         let position = min(index + offset, tokens.count - 1)
         expandWord(at: position)
@@ -455,27 +521,28 @@ struct FormulaParser {
 
     private mutating func parseStatementExpression() throws -> SyntaxExpression {
         let expression = try parseExpression()
-        guard case .end = current.kind else {
-            throw unexpectedTokenError(current)
+        guard currentTag() == .end else {
+            throw currentUnexpectedTokenError()
         }
         return expression
     }
 
     // MARK: - Precedence levels
+    //
+    // These functions recurse once per bracket level. They only look at payload-free token tags
+    // and build errors out of line, so that every frame stays small – iOS runs background work
+    // on threads with 512 KB of stack, and debug builds do not share stack slots.
 
     private mutating func parseExpression() throws -> SyntaxExpression {
-        depth += 1
+        try enterLevel()
         defer { depth -= 1 }
-        if depth > Self.maximumNesting {
-            throw FormulaError(kind: .nestingTooDeep, message: "Die Formel ist zu tief verschachtelt.", range: current.range, hint: nil)
-        }
         return try parseOr()
     }
 
     private mutating func parseOr() throws -> SyntaxExpression {
         var node = try parseAnd()
-        while case .keyword(.or) = current.kind {
-            let range = current.range
+        while currentTag() == .or {
+            let range = currentRange()
             advance()
             node = .binary(.or, node, try parseAnd(), implicit: false, range)
         }
@@ -484,8 +551,8 @@ struct FormulaParser {
 
     private mutating func parseAnd() throws -> SyntaxExpression {
         var node = try parseNot()
-        while case .keyword(.and) = current.kind {
-            let range = current.range
+        while currentTag() == .and {
+            let range = currentRange()
             advance()
             node = .binary(.and, node, try parseNot(), implicit: false, range)
         }
@@ -493,16 +560,18 @@ struct FormulaParser {
     }
 
     private mutating func parseNot() throws -> SyntaxExpression {
-        if case .keyword(.not) = current.kind {
-            let range = current.range
-            advance()
-            return .not(try parseNot(), range)
+        guard currentTag() == .not else {
+            return try parseComparison()
         }
-        return try parseComparison()
+        let range = currentRange()
+        advance()
+        try enterLevel()
+        defer { depth -= 1 }
+        return .not(try parseNot(), range)
     }
 
-    private mutating func comparisonOperator(_ kind: TokenKind) -> BinaryOperator? {
-        switch kind {
+    private static func comparisonOperator(_ tag: TokenTag) -> BinaryOperator? {
+        switch tag {
         case .less: return .less
         case .lessEqual: return .lessEqual
         case .greater: return .greater
@@ -515,15 +584,12 @@ struct FormulaParser {
 
     private mutating func parseComparison() throws -> SyntaxExpression {
         let left = try parseAdditive()
-        guard let op = comparisonOperator(current.kind) else { return left }
-        let range = current.range
+        guard let op = Self.comparisonOperator(currentTag()) else { return left }
+        let range = currentRange()
         advance()
         let right = try parseAdditive()
-        if comparisonOperator(current.kind) != nil {
-            throw FormulaError(kind: .comparisonChain,
-                               message: "Vergleichsketten wie a < x < b werden nicht erraten.",
-                               range: current.range,
-                               hint: "Schreibe (a < x) and (x < b).")
+        if Self.comparisonOperator(currentTag()) != nil {
+            throw Self.comparisonChainError(currentRange())
         }
         return .binary(op, left, right, implicit: false, range)
     }
@@ -531,39 +597,27 @@ struct FormulaParser {
     private mutating func parseAdditive() throws -> SyntaxExpression {
         var node = try parseTerm()
         while true {
-            switch current.kind {
-            case .plus:
-                let range = current.range
-                advance()
-                node = .binary(.add, node, try parseTerm(), implicit: false, range)
-            case .minus:
-                let range = current.range
-                advance()
-                node = .binary(.subtract, node, try parseTerm(), implicit: false, range)
-            default:
-                return node
-            }
+            let tag = currentTag()
+            guard tag == .plus || tag == .minus else { return node }
+            let range = currentRange()
+            advance()
+            node = .binary(tag == .plus ? .add : .subtract, node, try parseTerm(), implicit: false, range)
         }
     }
 
     private mutating func parseTerm() throws -> SyntaxExpression {
         var node = try parseUnary()
         while true {
-            let token = current
-            switch token.kind {
-            case .star:
+            let tag = currentTag()
+            let range = currentRange()
+            switch tag {
+            case .star, .slash:
                 advance()
-                node = .binary(.multiply, node, try parseUnary(), implicit: false, token.range)
-            case .slash:
-                advance()
-                node = .binary(.divide, node, try parseUnary(), implicit: false, token.range)
+                node = .binary(tag == .star ? .multiply : .divide, node, try parseUnary(), implicit: false, range)
             case .leftParen, .name, .invalid:
-                node = .binary(.multiply, node, try parsePower(), implicit: true, token.range)
+                node = .binary(.multiply, node, try parsePower(), implicit: true, range)
             case .number:
-                throw FormulaError(kind: .missingOperator,
-                                   message: "Vor dieser Zahl fehlt ein Operator.",
-                                   range: token.range,
-                                   hint: "Schreibe z. B. x*2 oder 2*3.")
+                throw Self.missingOperatorBeforeNumberError(range)
             default:
                 return node
             }
@@ -571,91 +625,119 @@ struct FormulaParser {
     }
 
     private mutating func parseUnary() throws -> SyntaxExpression {
-        switch current.kind {
-        case .minus:
-            let range = current.range
-            advance()
-            return .negate(try parseUnary(), range)
-        case .plus:
-            advance()
-            return try parseUnary()
-        default:
+        let tag = currentTag()
+        guard tag == .minus || tag == .plus else {
             return try parsePower()
         }
+        let range = currentRange()
+        advance()
+        try enterLevel()
+        defer { depth -= 1 }
+        let operand = try parseUnary()
+        return tag == .minus ? .negate(operand, range) : operand
     }
 
     private mutating func parsePower() throws -> SyntaxExpression {
         let base = try parsePostfix()
-        if case .caret = current.kind {
-            let range = current.range
-            advance()
-            let exponent = try parseUnary()
-            return .binary(.power, base, exponent, implicit: false, range)
-        }
-        return base
+        guard currentTag() == .caret else { return base }
+        let range = currentRange()
+        advance()
+        try enterLevel()
+        defer { depth -= 1 }
+        let exponent = try parseUnary()
+        return .binary(.power, base, exponent, implicit: false, range)
     }
 
     private mutating func parsePostfix() throws -> SyntaxExpression {
         var node = try parsePrimary()
-        while case .leftBracket = current.kind {
+        while currentTag() == .leftBracket {
             switch node {
             case .name, .list, .index: break
-            default:
-                throw FormulaError(kind: .typeMismatch, message: "Nur Listen können mit [ ] indiziert werden.", range: current.range,
-                                   hint: "Beispiel: notes[2] oder [0, 3, 7][i].")
+            default: throw Self.indexTargetError(currentRange())
             }
-            let open = current
-            advance()
-            let indexExpression = try parseExpression()
-            guard case .rightBracket = current.kind else {
-                throw FormulaError(kind: .missingClosingParenthesis, message: "Die eckige Klammer wird nicht geschlossen.",
-                                   range: open.range, hint: "Ergänze „]“.")
-            }
-            let close = current.range
-            advance()
-            node = .index(node, indexExpression, open.range.union(close))
+            node = try parseIndex(of: node)
         }
         return node
     }
 
+    private mutating func parseIndex(of node: SyntaxExpression) throws -> SyntaxExpression {
+        let open = currentRange()
+        advance()
+        let indexExpression = try parseExpression()
+        guard currentTag() == .rightBracket else {
+            throw Self.unclosedError(open, bracket: true)
+        }
+        let close = currentRange()
+        advance()
+        return .index(node, indexExpression, open.union(close))
+    }
+
     private mutating func parsePrimary() throws -> SyntaxExpression {
+        switch currentTag() {
+        case .number, .name, .invalid:
+            return try parseOperand()
+        case .leftParen:
+            return try parseGroup()
+        case .leftBracket:
+            return try parseList()
+        default:
+            throw currentMissingOperandError()
+        }
+    }
+
+    private mutating func parseGroup() throws -> SyntaxExpression {
+        let open = currentRange()
+        advance()
+        let inner = try parseExpression()
+        guard currentTag() == .rightParen else {
+            throw Self.unclosedError(open, bracket: false)
+        }
+        let close = currentRange()
+        advance()
+        return .group(inner, open.union(close))
+    }
+
+    private enum OperandStart {
+        case done(SyntaxExpression)
+        case call(id: String, spelling: String, nameToken: FormulaToken)
+        case userCall(name: String, arity: Int, nameToken: FormulaToken)
+    }
+
+    /// Number, name, function call or invalid word.
+    private mutating func parseOperand() throws -> SyntaxExpression {
+        switch try operandStart() {
+        case .done(let expression):
+            return expression
+        case .call(let id, let spelling, let nameToken):
+            return try parseCall(id: id, spelling: spelling, nameToken: nameToken)
+        case .userCall(let name, let arity, let nameToken):
+            return try parseUserCall(name: name, arity: arity, nameToken: nameToken)
+        }
+    }
+
+    /// The non-recursive part of an operand (the only place that copies a token).
+    @inline(never)
+    private mutating func operandStart() throws -> OperandStart {
         let token = current
         switch token.kind {
         case .invalid(let error):
             throw error
         case .number(let value):
             advance()
-            return .number(value, token.range)
+            return .done(.number(value, token.range))
         case .name(let reference, let spelling):
+            advance()
             switch reference {
             case .function(let id):
-                advance()
-                return try parseCall(id: id, spelling: spelling, nameToken: token)
+                return .call(id: id, spelling: spelling, nameToken: token)
             case .definition(let name):
                 if case .function(let arity) = definitions[name] {
-                    advance()
-                    return try parseUserCall(name: name, arity: arity, nameToken: token)
+                    return .userCall(name: name, arity: arity, nameToken: token)
                 }
-                advance()
-                return .name(reference, spelling: spelling, token.range)
+                return .done(.name(reference, spelling: spelling, token.range))
             default:
-                advance()
-                return .name(reference, spelling: spelling, token.range)
+                return .done(.name(reference, spelling: spelling, token.range))
             }
-        case .leftParen:
-            advance()
-            let inner = try parseExpression()
-            guard case .rightParen = current.kind else {
-                throw FormulaError(kind: .missingClosingParenthesis,
-                                   message: "Die Klammer wird nicht geschlossen.",
-                                   range: token.range,
-                                   hint: "Ergänze „)“.")
-            }
-            let close = current.range
-            advance()
-            return .group(inner, token.range.union(close))
-        case .leftBracket:
-            return try parseList()
         default:
             throw missingOperandError(at: token)
         }
@@ -695,46 +777,65 @@ struct FormulaParser {
     }
 
     private mutating func parseCall(id: String, spelling: String, nameToken: FormulaToken) throws -> SyntaxExpression {
-        guard let spec = FormulaCatalog.function(named: id) else {
-            throw unknownNameError(spelling, range: nameToken.range, isCall: true)
+        let call = try beginCall(id: id, spelling: spelling, nameRange: nameToken.range)
+        if call.isAggregate {
+            return try parseAggregate(id: call.id, spelling: spelling, nameRange: nameToken.range, open: call.open)
         }
-        guard case .leftParen = current.kind else {
-            throw FormulaError(kind: .functionNeedsParenthesis,
-                               message: "Nach „\(spelling)“ wird eine Klammer erwartet.",
-                               range: nameToken.range,
-                               hint: "Schreibe z. B. \(spec.syntax).")
-        }
-        let openToken = current
-        advance()
-        if spec.implementation == .special(.sum) || spec.implementation == .special(.prod) {
-            return try parseAggregate(spec: spec, spelling: spelling, nameToken: nameToken, openToken: openToken)
-        }
-        var arguments: [SyntaxExpression] = []
-        if case .rightParen = current.kind {
-            // Empty argument list – handled by the count check below.
-        } else {
-            arguments.append(try parseExpression())
-            while case .comma = current.kind {
-                advance()
-                arguments.append(try parseExpression())
-            }
-        }
-        guard case .rightParen = current.kind else {
-            if case .end = current.kind {
-                throw FormulaError(kind: .missingClosingParenthesis,
-                                   message: "Die Klammer von „\(spelling)“ wird nicht geschlossen.",
-                                   range: openToken.range,
-                                   hint: "Ergänze „)“.")
-            }
-            throw unexpectedTokenError(current)
-        }
-        advance()
-        guard spec.accepts(arguments.count) else {
-            throw argumentCountError(spec: spec, spelling: spelling, found: arguments.count, range: nameToken.range)
-        }
-        return .call(.function(spec.id), spelling: spelling, arguments: arguments, nameToken.range)
+        let arguments = try parseArguments()
+        return try finishCall(id: call.id, spelling: spelling, arguments: arguments, nameRange: nameToken.range, open: call.open)
     }
 
+    /// Checks the function name and the opening parenthesis (non-recursive part).
+    @inline(never)
+    private mutating func beginCall(id: String, spelling: String, nameRange: SourceRange) throws -> (id: String, isAggregate: Bool, open: SourceRange) {
+        guard let call = Self.callInfo(id) else {
+            throw unknownNameError(spelling, range: nameRange, isCall: true)
+        }
+        guard currentTag() == .leftParen else {
+            throw Self.callError(.needsParenthesis, spelling: spelling, syntax: Self.syntax(of: call.id), range: nameRange)
+        }
+        let open = currentRange()
+        advance()
+        return (call.id, call.isAggregate, open)
+    }
+
+    /// Checks the closing parenthesis and the number of arguments (non-recursive part).
+    @inline(never)
+    private mutating func finishCall(id: String, spelling: String, arguments: [SyntaxExpression], nameRange: SourceRange,
+                                     open: SourceRange) throws -> SyntaxExpression {
+        guard currentTag() == .rightParen else {
+            if currentTag() == .end {
+                throw Self.callError(.unclosed, spelling: spelling, syntax: "", range: open)
+            }
+            throw currentUnexpectedTokenError()
+        }
+        advance()
+        if let error = argumentCountProblem(id: id, spelling: spelling, found: arguments.count, range: nameRange) {
+            throw error
+        }
+        return .call(.function(id), spelling: spelling, arguments: arguments, nameRange)
+    }
+
+    /// Canonical id of a catalogue function and whether it is sum/prod (no large spec copies in
+    /// the recursive frames).
+    @inline(never)
+    private static func callInfo(_ id: String) -> (id: String, isAggregate: Bool)? {
+        guard let spec = FormulaCatalog.function(named: id) else { return nil }
+        return (spec.id, spec.implementation == .special(.sum) || spec.implementation == .special(.prod))
+    }
+
+    @inline(never)
+    private static func syntax(of id: String) -> String {
+        FormulaCatalog.function(named: id)?.syntax ?? id + "(…)"
+    }
+
+    @inline(never)
+    private func argumentCountProblem(id: String, spelling: String, found: Int, range: SourceRange) -> FormulaError? {
+        guard let spec = FormulaCatalog.function(named: id), !spec.accepts(found) else { return nil }
+        return argumentCountError(spec: spec, spelling: spelling, found: found, range: range)
+    }
+
+    @inline(never)
     private func argumentCountError(spec: FunctionSpec, spelling: String, found: Int, range: SourceRange) -> FormulaError {
         let expected: String
         if spec.implementation == .special(.piecewise) {
@@ -754,81 +855,119 @@ struct FormulaParser {
                             hint: "Syntax: \(spec.syntax).")
     }
 
-    private mutating func parseAggregate(spec: FunctionSpec, spelling: String, nameToken: FormulaToken, openToken: FormulaToken) throws -> SyntaxExpression {
-        // 1. Loop variable: a new name, taken literally (no segmentation).
-        let variableToken = tokens[index]
-        guard case .word(let variable) = variableToken.kind,
+    /// Comma separated arguments up to (not including) the closing parenthesis.
+    private mutating func parseArguments() throws -> [SyntaxExpression] {
+        var arguments: [SyntaxExpression] = []
+        if currentTag() == .rightParen { return arguments }
+        arguments.append(try parseExpression())
+        while currentTag() == .comma {
+            advance()
+            arguments.append(try parseExpression())
+        }
+        return arguments
+    }
+
+    private enum CallProblem {
+        case needsParenthesis, unclosed, userNeedsParenthesis, aggregateVariable, aggregateArgumentCount
+    }
+
+    @inline(never)
+    private static func callError(_ problem: CallProblem, spelling: String, syntax: String, range: SourceRange,
+                                  missing: String = "", id: String = "") -> FormulaError {
+        switch problem {
+        case .needsParenthesis:
+            return FormulaError(kind: .functionNeedsParenthesis, message: "Nach „\(spelling)“ wird eine Klammer erwartet.",
+                                range: range, hint: "Schreibe z. B. \(syntax).")
+        case .unclosed:
+            return FormulaError(kind: .missingClosingParenthesis, message: "Die Klammer von „\(spelling)“ wird nicht geschlossen.",
+                                range: range, hint: "Ergänze „)“.")
+        case .userNeedsParenthesis:
+            return FormulaError(kind: .functionNeedsParenthesis, message: "Die Hilfsfunktion „\(spelling)“ braucht Argumente in Klammern.",
+                                range: range, hint: "Schreibe z. B. \(spelling)(x).")
+        case .aggregateVariable:
+            return FormulaError(kind: .invalidArgument,
+                                message: "Das erste Argument von „\(spelling)“ muss der Name der Laufvariable sein.",
+                                range: range, hint: "Syntax: \(syntax), z. B. \(id)(i, 1, 5, i).")
+        case .aggregateArgumentCount:
+            if missing.isEmpty {
+                return FormulaError(kind: .wrongArgumentCount, message: "„\(spelling)“ erwartet genau 4 Argumente: \(syntax).",
+                                    range: range, hint: nil)
+            }
+            return FormulaError(kind: .wrongArgumentCount,
+                                message: "„\(spelling)“ erwartet 4 Argumente: \(syntax). Es fehlt \(missing).",
+                                range: range, hint: "Beispiel: \(id)(i, 1, 5, i).")
+        }
+    }
+
+    @inline(never)
+    private static func userArityError(_ name: String, arity: Int, found: Int, range: SourceRange) -> FormulaError {
+        FormulaError(kind: .wrongArgumentCount,
+                     message: "„\(name)“ erwartet \(arity == 1 ? "1 Argument" : "\(arity) Argumente"), gefunden: \(found).",
+                     range: range, hint: nil)
+    }
+
+    /// The first argument of sum/prod: a new name, taken literally (no segmentation).
+    private func loopVariable() -> (name: String, range: SourceRange)? {
+        let token = tokens[index]
+        guard case .word(let variable) = token.kind,
               variable.first?.isASCIILetter == true,
               FormulaConstant(rawValue: variable.lowercased()) == nil,
               FormulaCatalog.function(named: variable) == nil,
               LogicKeyword(rawValue: variable.lowercased()) == nil else {
-            throw FormulaError(kind: .invalidArgument,
-                               message: "Das erste Argument von „\(spelling)“ muss der Name der Laufvariable sein.",
-                               range: variableToken.range,
-                               hint: "Syntax: \(spec.syntax), z. B. \(spec.id)(i, 1, 5, i).")
+            return nil
+        }
+        return (variable, token.range)
+    }
+
+    private mutating func expectAggregateComma(id: String, spelling: String, nameRange: SourceRange, missing: String) throws {
+        guard currentTag() == .comma else {
+            if case .invalid(let error) = tokens[index].kind { throw error }
+            throw Self.callError(.aggregateArgumentCount, spelling: spelling, syntax: Self.syntax(of: id), range: nameRange,
+                                 missing: missing, id: id)
         }
         advance()
-        func expectComma(_ position: String) throws {
-            guard case .comma = current.kind else {
-                if case .invalid(let error) = current.kind { throw error }
-                throw FormulaError(kind: .wrongArgumentCount,
-                                   message: "„\(spelling)“ erwartet 4 Argumente: \(spec.syntax). Es fehlt \(position).",
-                                   range: nameToken.range,
-                                   hint: "Beispiel: \(spec.id)(i, 1, 5, i).")
-            }
-            advance()
+    }
+
+    private mutating func parseAggregate(id: String, spelling: String, nameRange: SourceRange, open: SourceRange) throws -> SyntaxExpression {
+        // 1. Loop variable.
+        guard let variable = loopVariable() else {
+            throw Self.callError(.aggregateVariable, spelling: spelling, syntax: Self.syntax(of: id), range: tokens[index].range, id: id)
         }
-        try expectComma("der Start")
+        advance()
+        try expectAggregateComma(id: id, spelling: spelling, nameRange: nameRange, missing: "der Start")
         // 2./3. Start and end are evaluated outside the scope of the loop variable.
         let start = try parseExpression()
-        try expectComma("das Ende")
+        try expectAggregateComma(id: id, spelling: spelling, nameRange: nameRange, missing: "das Ende")
         let end = try parseExpression()
-        try expectComma("der Ausdruck")
+        try expectAggregateComma(id: id, spelling: spelling, nameRange: nameRange, missing: "der Ausdruck")
         // 4. The body sees the loop variable (it shadows outer names).
-        localScopes.append([variable])
+        localScopes.append([variable.name])
         let body = try parseExpression()
         localScopes.removeLast()
-        guard case .rightParen = current.kind else {
-            if case .comma = current.kind {
-                throw FormulaError(kind: .wrongArgumentCount,
-                                   message: "„\(spelling)“ erwartet genau 4 Argumente: \(spec.syntax).",
-                                   range: nameToken.range, hint: nil)
+        guard currentTag() == .rightParen else {
+            if currentTag() == .comma {
+                throw Self.callError(.aggregateArgumentCount, spelling: spelling, syntax: Self.syntax(of: id), range: nameRange)
             }
-            throw FormulaError(kind: .missingClosingParenthesis,
-                               message: "Die Klammer von „\(spelling)“ wird nicht geschlossen.",
-                               range: openToken.range, hint: "Ergänze „)“.")
+            throw Self.callError(.unclosed, spelling: spelling, syntax: "", range: open)
         }
         advance()
-        let variableName = SyntaxExpression.name(.local(variable), spelling: variable, variableToken.range)
-        return .call(.function(spec.id), spelling: spelling, arguments: [variableName, start, end, body], nameToken.range)
+        let variableName = SyntaxExpression.name(.local(variable.name), spelling: variable.name, variable.range)
+        return .call(.function(id), spelling: spelling, arguments: [variableName, start, end, body], nameRange)
     }
 
     private mutating func parseUserCall(name: String, arity: Int, nameToken: FormulaToken) throws -> SyntaxExpression {
-        guard case .leftParen = current.kind else {
-            throw FormulaError(kind: .functionNeedsParenthesis,
-                               message: "Die Hilfsfunktion „\(name)“ braucht Argumente in Klammern.",
-                               range: nameToken.range, hint: "Schreibe z. B. \(name)(x).")
+        guard currentTag() == .leftParen else {
+            throw Self.callError(.userNeedsParenthesis, spelling: name, syntax: "", range: nameToken.range)
         }
-        let openToken = current
+        let open = currentRange()
         advance()
-        var arguments: [SyntaxExpression] = []
-        if case .rightParen = current.kind {
-        } else {
-            arguments.append(try parseExpression())
-            while case .comma = current.kind {
-                advance()
-                arguments.append(try parseExpression())
-            }
-        }
-        guard case .rightParen = current.kind else {
-            throw FormulaError(kind: .missingClosingParenthesis, message: "Die Klammer von „\(name)“ wird nicht geschlossen.",
-                               range: openToken.range, hint: "Ergänze „)“.")
+        let arguments = try parseArguments()
+        guard currentTag() == .rightParen else {
+            throw Self.callError(.unclosed, spelling: name, syntax: "", range: open)
         }
         advance()
         guard arguments.count == arity else {
-            throw FormulaError(kind: .wrongArgumentCount,
-                               message: "„\(name)“ erwartet \(arity == 1 ? "1 Argument" : "\(arity) Argumente"), gefunden: \(arguments.count).",
-                               range: nameToken.range, hint: nil)
+            throw Self.userArityError(name, arity: arity, found: arguments.count, range: nameToken.range)
         }
         return .call(.definition(name), spelling: name, arguments: arguments, nameToken.range)
     }

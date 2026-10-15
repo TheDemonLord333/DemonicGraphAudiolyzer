@@ -313,4 +313,62 @@ struct FormulaLanguageTests {
             }
         }
     }
+
+    // MARK: Stack safety
+
+    /// Parses, binds, compiles and evaluates `text`; returns "ok" or the error kind.
+    private static func outcome(_ text: String) -> String {
+        let environment = FormulaEnvironment.classic
+        do {
+            let program = try FormulaParser.parseProgram(text, environment: environment)
+            let root = try FormulaBinder.bind(program, environment: environment).root
+            let compiled = CompiledProgram(root)
+            let buffer = EvaluationBuffer(capacity: compiled.slotCount)
+            buffer[.x] = 1
+            let fast = buffer.evaluate(compiled)
+            let reference = root.evaluate(x: 1, parameters: FormulaParameters())
+            return fast == reference || (fast.isNaN && reference.isNaN) ? "ok" : "mismatch"
+        } catch let error as FormulaError {
+            return "\(error.kind)"
+        } catch {
+            return "error"
+        }
+    }
+
+    @Test("Tiefe Formeln brauchen wenig Stack: alles läuft auf einem Thread mit 512 KB (wie Hintergrund-Threads unter iOS)")
+    func deepFormulasFitSmallStacks() {
+        let helpers = (1...31).map { "f\($0)(k) = f\($0 - 1)(k) + 1" }.joined(separator: "\n")
+        let tooManyHelpers = (1...40).map { "g\($0)(k) = g\($0 - 1)(k) + 1" }.joined(separator: "\n")
+        let chainOfDefinitions = "a1 = x + 1\n" + (1..<78).map { "a\($0 + 1) = a\($0) + 1" }.joined(separator: "\n") + "\na78"
+        let cases: [(String, String)] = [
+            (String(repeating: "x+", count: 150) + "x", "ok"),
+            (String(repeating: "x+", count: 170) + "x", "tooComplex"),
+            (String(repeating: "(", count: 63) + "x" + String(repeating: ")", count: 63), "ok"),
+            (String(repeating: "(", count: 100) + "x" + String(repeating: ")", count: 100), "nestingTooDeep"),
+            (String(repeating: "sin(", count: 63) + "x" + String(repeating: ")", count: 63), "ok"),
+            (String(repeating: "-", count: 400) + "x", "nestingTooDeep"),
+            (String(repeating: "2^", count: 100) + "x", "nestingTooDeep"),
+            (String(repeating: "not ", count: 100) + "x", "nestingTooDeep"),
+            ("f0(k) = k + 1\n" + helpers + "\nf31(x)", "ok"),
+            ("g0(k) = k + 1\n" + tooManyHelpers + "\ng40(x)", "tooComplex"),
+            (chainOfDefinitions, "ok"),
+            ("--x", "ok")
+        ]
+        let box = OutcomeBox()
+        let texts = cases.map(\.0)
+        let done = DispatchSemaphore(value: 0)
+        let thread = Thread {
+            box.values = texts.map { Self.outcome($0) }
+            done.signal()
+        }
+        thread.stackSize = 512 * 1024
+        thread.start()
+        done.wait()
+        #expect(box.values == cases.map(\.1))
+    }
+}
+
+/// Result of the small-stack thread (handed over through a semaphore).
+private final class OutcomeBox: @unchecked Sendable {
+    var values: [String] = []
 }

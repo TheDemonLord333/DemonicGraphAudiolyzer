@@ -153,7 +153,7 @@ final class AudiolyzerModel {
 
     /// Sample rate of the preview. Equal to the default export rate so that preview and
     /// export use bit-identical PCM; the engine converts to the hardware rate.
-    static let previewSampleRate: Double = 44_100
+    nonisolated static let previewSampleRate: Double = 44_100
 
     init(sessionStore: SessionStateStore = SessionStateStore(), defaults: PlaybackDefaults = .load()) {
         self.sessionStore = sessionStore
