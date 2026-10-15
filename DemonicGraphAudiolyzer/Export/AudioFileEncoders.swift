@@ -2,12 +2,18 @@ import AVFoundation
 import Foundation
 import LameKit
 
-/// Common interface of the three file encoders. Input is the mono signal of the renderer;
-/// the encoders write it to every output channel.
+/// Common interface of the three file encoders. Input is the stereo signal of the renderer
+/// (the classic modes pass their mono signal as left and right).
 protocol AudioFileEncoding: AnyObject {
-    func write(mono: UnsafePointer<Float>, frameCount: Int) throws
+    func write(left: UnsafePointer<Float>, right: UnsafePointer<Float>, frameCount: Int) throws
     func finish() throws
     func abandon()
+}
+
+extension AudioFileEncoding {
+    func write(mono: UnsafePointer<Float>, frameCount: Int) throws {
+        try write(left: mono, right: mono, frameCount: frameCount)
+    }
 }
 
 enum AudioFileEncoderError: LocalizedError {
@@ -50,8 +56,9 @@ final class WAVEncoder: AudioFileEncoding {
         self.writer = try WAVFileWriter(url: url, sampleRate: sampleRate, channels: channels, bitDepth: bitDepth)
     }
 
-    func write(mono: UnsafePointer<Float>, frameCount: Int) throws {
-        try writer.write(channelData: Array(repeating: mono, count: channels), frameCount: frameCount)
+    func write(left: UnsafePointer<Float>, right: UnsafePointer<Float>, frameCount: Int) throws {
+        let channelData = channels >= 2 ? [left, right] + Array(repeating: right, count: channels - 2) : [left]
+        try writer.write(channelData: channelData, frameCount: frameCount)
     }
 
     func finish() throws {
@@ -93,13 +100,13 @@ final class AACEncoder: AudioFileEncoding {
         self.buffer = buffer
     }
 
-    func write(mono: UnsafePointer<Float>, frameCount: Int) throws {
+    func write(left: UnsafePointer<Float>, right: UnsafePointer<Float>, frameCount: Int) throws {
         guard let file, let channelData = buffer.floatChannelData else { return }
         var offset = 0
         while offset < frameCount {
             let count = min(frameCount - offset, Int(buffer.frameCapacity))
             for channel in 0..<channels {
-                channelData[channel].update(from: mono + offset, count: count)
+                channelData[channel].update(from: (channel == 0 ? left : right) + offset, count: count)
             }
             buffer.frameLength = AVAudioFrameCount(count)
             do {
@@ -152,11 +159,11 @@ final class LameMP3FileEncoder: AudioFileEncoding {
         try? handle?.close()
     }
 
-    func write(mono: UnsafePointer<Float>, frameCount: Int) throws {
+    func write(left: UnsafePointer<Float>, right: UnsafePointer<Float>, frameCount: Int) throws {
         guard let handle else { return }
         let bytes: [UInt8]
         do {
-            bytes = try encoder.encode(left: mono, right: mono, frameCount: frameCount)
+            bytes = try encoder.encode(left: left, right: right, frameCount: frameCount)
         } catch {
             throw AudioFileEncoderError.encodingFailed(String(describing: error))
         }

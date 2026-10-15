@@ -43,20 +43,29 @@ final class ExportModel {
         return nil
     }
 
-    /// Starts the export of `configuration`. `onEnd` is called on the main actor when it finishes.
+    /// Starts the export of a classic configuration (the duration of the dialog applies).
     func start(configuration: RenderConfiguration, onEnd: @escaping @MainActor () -> Void) {
+        start(job: .classic(configuration), onEnd: onEnd)
+    }
+
+    /// Starts the export of `job` – the complete multi-voice mix for synthesizer projects.
+    /// `onEnd` is called on the main actor when it finishes.
+    func start(job requested: RenderJob, onEnd: @escaping @MainActor () -> Void) {
         guard !isRunning else { return }
         stopPreview()
         verification = nil
         state = .running(progress: 0)
-        var job = configuration
-        job.settings.duration = duration.clamped(to: SoundSettings.durationRange, fallback: configuration.settings.duration)
+        var job = requested
+        if case .classic(var configuration) = requested {
+            configuration.settings.duration = duration.clamped(to: SoundSettings.durationRange, fallback: configuration.settings.duration)
+            job = .classic(configuration)
+        }
         let options = self.options
         let name = fileName
         task = Task.detached(priority: .userInitiated) { [weak self] in
             let outcome: Result<ExportResult, ExportError>
             do {
-                let result = try AudioExporter.export(configuration: job, options: options, fileName: name) { fraction in
+                let result = try AudioExporter.export(job: job, options: options, fileName: name) { fraction in
                     Task { @MainActor [weak self] in
                         guard let self, case .running(let current) = self.state, fraction > current else { return }
                         self.state = .running(progress: fraction)

@@ -51,6 +51,8 @@ struct GraphView: View {
             overlay.playRange = settings.playXMin...max(settings.playXMax, settings.playXMin + 1e-9)
         case .waveform:
             overlay.section = settings.sectionStart...max(settings.sectionEnd, settings.sectionStart + 1e-9)
+        case .synthesizer, .pendulum:
+            break
         }
         guard let snapshot else { return overlay }
         switch snapshot.mode {
@@ -60,6 +62,8 @@ struct GraphView: View {
             if let y = snapshot.readout.y {
                 overlay.point = GraphPoint(x: snapshot.readout.x, y: y)
             }
+        case .synthesizer, .pendulum:
+            break
         case .waveform:
             overlay.sectionIsSounding = !snapshot.isPaused
             if model.slowMotionWaveform {

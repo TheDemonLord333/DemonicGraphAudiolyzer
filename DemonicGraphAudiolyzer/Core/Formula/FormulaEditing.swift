@@ -322,3 +322,31 @@ struct AggregateDraft: Equatable, Sendable {
 extension String {
     var trimmed: String { trimmingCharacters(in: .whitespacesAndNewlines) }
 }
+
+/// Parsing for the readable notation of an editor: unknown names are tolerated (they are
+/// reported separately by the compiler), definitions of other sources are taken into account.
+enum FormulaDisplay {
+    static func program(_ text: String, context: FormulaContext, definitions: [String] = [], requiresOutput: Bool = true) -> SyntaxProgram? {
+        var shapes: [String: DefinitionShape] = [:]
+        for source in definitions where !source.trimmed.isEmpty {
+            var environment = FormulaEnvironment(context: context)
+            environment.externalDefinitions = shapes
+            environment.requiresOutput = false
+            environment.allowAutoParameters = true
+            guard let program = try? FormulaParser.parseProgram(source, environment: environment) else { continue }
+            for statement in program.definitions {
+                guard let name = statement.definedName else { continue }
+                if case .function(_, let parameters) = statement.kind {
+                    shapes[name] = .function(arity: parameters.count)
+                } else {
+                    shapes[name] = statement.isList ? .list : .value
+                }
+            }
+        }
+        var environment = FormulaEnvironment(context: context)
+        environment.externalDefinitions = shapes
+        environment.requiresOutput = requiresOutput
+        environment.allowAutoParameters = true
+        return try? FormulaParser.parseProgram(text, environment: environment)
+    }
+}

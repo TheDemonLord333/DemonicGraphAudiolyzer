@@ -767,8 +767,6 @@ struct SynthProject: Codable, Equatable, Hashable, Sendable {
     /// Seed of all noise generators (reproducible preview and export).
     var noiseSeed: UInt64 = 0x5EED_DE40_6A11_0001
     var laneLayout: LaneLayout = .byUnit
-    var showTrails = true
-    var showSignalSnippet = true
 
     static let maximumVoices = 8
     static let masterLevelRange: ClosedRange<Double> = -24...0
@@ -810,7 +808,5 @@ struct SynthProject: Codable, Equatable, Hashable, Sendable {
         masterLevelDecibels = c.value(.masterLevelDecibels, d.masterLevelDecibels)
         noiseSeed = c.value(.noiseSeed, d.noiseSeed)
         laneLayout = c.value(.laneLayout, d.laneLayout)
-        showTrails = c.value(.showTrails, d.showTrails)
-        showSignalSnippet = c.value(.showSignalSnippet, d.showSignalSnippet)
     }
 }

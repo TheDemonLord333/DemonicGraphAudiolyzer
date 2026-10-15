@@ -265,3 +265,23 @@ enum RobustRange {
         return sorted[lowerIndex] * (1 - fraction) + sorted[upperIndex] * fraction
     }
 }
+
+extension SampledCurve {
+    /// Linearly interpolated value at x (nil in gaps or outside the sampled range).
+    func value(atX x: Double) -> Double? {
+        for segment in segments {
+            guard let first = segment.points.first, let last = segment.points.last, x >= first.x, x <= last.x else { continue }
+            var low = 0
+            var high = segment.points.count - 1
+            while high - low > 1 {
+                let middle = (low + high) / 2
+                if segment.points[middle].x <= x { low = middle } else { high = middle }
+            }
+            let a = segment.points[low]
+            let b = segment.points[high]
+            guard b.x > a.x else { return a.y }
+            return a.y + (b.y - a.y) * (x - a.x) / (b.x - a.x)
+        }
+        return nil
+    }
+}

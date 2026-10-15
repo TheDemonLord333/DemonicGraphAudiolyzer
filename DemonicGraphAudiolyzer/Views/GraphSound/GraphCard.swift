@@ -132,6 +132,8 @@ struct PlaybackReadoutView: View {
                     ReadoutValue(label: "Grundfrequenz", value: NumberText.frequency(settings.baseFrequency), highlighted: true)
                     ReadoutValue(label: "Abschnitt", value: "\(NumberText.compact(settings.sectionStart, maximumFractionDigits: 2)) … \(NumberText.compact(settings.sectionEnd, maximumFractionDigits: 2))")
                     ReadoutValue(label: "Zeit", value: snapshot.map { NumberText.seconds($0.time) } ?? NumberText.seconds(settings.duration))
+                case .synthesizer, .pendulum:
+                    ReadoutValue(label: "Zeit", value: snapshot.map { NumberText.seconds($0.time) } ?? "–")
                 }
             }
             if let snapshot, !compact {

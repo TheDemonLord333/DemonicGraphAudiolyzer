@@ -13,11 +13,82 @@ struct PersistenceTests {
             .appendingPathComponent("presets.store")
     }
 
+    /// Current schema (version 2) with the migration plan – exactly as the app opens its store.
     private static func container(at url: URL) throws -> ModelContainer {
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-        let schema = Schema([SavedPreset.self])
+        let schema = Schema(versionedSchema: SavedPresetSchemaV2.self)
+        let configuration = ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none)
+        return try ModelContainer(for: schema, migrationPlan: SavedPresetMigrationPlan.self, configurations: [configuration])
+    }
+
+    /// A store as written by the first app version (schema version 1, no versioning information).
+    private static func legacyContainer(at url: URL) throws -> ModelContainer {
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let schema = Schema([SavedPresetSchemaV1.SavedPreset.self])
         let configuration = ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none)
         return try ModelContainer(for: schema, configurations: [configuration])
+    }
+
+    @Test("Migration: Presets der ersten Version bleiben mit allen Werten erhalten")
+    func migrationFromVersionOne() throws {
+        let url = Self.storeURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+
+        var preset = SoundPreset(name: "Alt", summary: "Version 1", formula: "asin(bx)+c",
+                                 parameters: FormulaParameters(a: 1, b: 0.25, c: 0.5))
+        preset.settings.mode = .graph
+        preset.settings.playXMin = -3
+        preset.settings.playXMax = 3
+        preset.settings.timbre = .rich
+        preset.settings.duration = 17
+        let oldID = preset.id
+        do {
+            let container = try Self.legacyContainer(at: url)
+            let context = ModelContext(container)
+            context.insert(SavedPresetSchemaV1.SavedPreset(preset: preset))
+            try context.save()
+        }
+
+        // Open the same file with the current schema and the migration plan.
+        let container = try Self.container(at: url)
+        let context = ModelContext(container)
+        let fetched = try context.fetch(FetchDescriptor<SavedPreset>())
+        #expect(fetched.count == 1)
+        let stored = try #require(fetched.first)
+        #expect(stored.id == oldID)
+        #expect(stored.name == "Alt")
+        #expect(stored.projectData == nil)
+        let restored = stored.preset
+        #expect(restored.formula == "asin(bx)+c")
+        #expect(restored.parameters == preset.parameters)
+        #expect(restored.settings.mode == .graph, "Bedeutung unverändert")
+        #expect(restored.settings.playXMin == -3 && restored.settings.playXMax == 3)
+        #expect(restored.settings.timbre == .rich)
+        #expect(restored.settings.duration == 17)
+        #expect(restored.project == nil)
+        // The formula still means the same.
+        if case .success(let formula) = ParsedFormula.parse(restored.formula) {
+            #expect(abs(formula.root.evaluate(x: 2, parameters: restored.parameters) - (asin(0.5) + 0.5)) < 1e-12)
+        } else {
+            Issue.record("Formel nicht mehr lesbar")
+        }
+    }
+
+    @Test("Synthesizer-Projekte mit Stimmen werden gespeichert und wiederhergestellt")
+    func synthProjectRoundTrip() throws {
+        let url = Self.storeURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        let original = SynthPresets.finalBoss
+        do {
+            let container = try Self.container(at: url)
+            try PresetStore.save(original, name: "Boss", in: ModelContext(container))
+        }
+        let container = try Self.container(at: url)
+        let stored = try #require(try ModelContext(container).fetch(FetchDescriptor<SavedPreset>()).first)
+        let restored = stored.preset
+        #expect(restored.settings.mode == .synthesizer)
+        #expect(restored.project == original.project)
+        #expect(restored.project?.voices.count == original.project?.voices.count)
     }
 
     @Test("Eigenes Preset bleibt nach einem Neustart erhalten (alle Felder)")

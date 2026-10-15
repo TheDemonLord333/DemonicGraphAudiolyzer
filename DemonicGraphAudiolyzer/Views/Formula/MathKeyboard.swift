@@ -22,18 +22,31 @@ struct MathKey: Identifiable, Hashable {
         MathKey(id: "key-" + title, title: title, accessibilityName: name, action: .insert(insert ?? title, cursorBack: 0))
     }
 
-    static func function(_ function: MathFunction, name: String) -> MathKey {
-        MathKey(id: "fn-" + function.rawValue, title: function.rawValue, accessibilityName: name,
-                action: .insert(function.rawValue + "()", cursorBack: 1), isFunction: true)
+    /// A catalogue function: inserts its template (with argument commas) and places the cursor
+    /// after the opening parenthesis; the signature hint then shows the argument positions.
+    static func function(_ id: String) -> MathKey {
+        let spec = FormulaCatalog.function(named: id)!
+        let template = spec.template
+        return MathKey(id: "fn-" + spec.id, title: spec.id, accessibilityName: spec.title,
+                       action: .insert(template, cursorBack: template.count - spec.id.count - 1), isFunction: true)
     }
 
-    static let symbols: [MathKey] = [
-        .text("x", name: "x"),
-        .text("a", name: "Parameter a"),
-        .text("b", name: "Parameter b"),
-        .text("c", name: "Parameter c"),
-        .text("π", insert: "pi", name: "Pi"),
-        .text("e", name: "Eulersche Zahl e"),
+    static func function(_ function: MathFunction, name: String) -> MathKey {
+        Self.function(function.rawValue)
+    }
+
+    static let left = MathKey(id: "key-left", title: "◀", accessibilityName: "Cursor nach links", action: .moveLeft)
+    static let right = MathKey(id: "key-right", title: "▶", accessibilityName: "Cursor nach rechts", action: .moveRight)
+    static let delete = MathKey(id: "key-delete", title: "⌫", accessibilityName: "Löschen", action: .deleteBackward)
+    static let done = MathKey(id: "keyboardDone", title: "Fertig", accessibilityName: "Fertig", action: .done)
+}
+
+/// Key sets of the supplementary keyboard for the classic modes and the synthesizer.
+struct MathKeyboardLayout: Equatable {
+    var symbols: [MathKey]
+    var functions: [MathKey]
+
+    private static let operators: [MathKey] = [
         .text("(", name: "Klammer auf"),
         .text(")", name: "Klammer zu"),
         .text("+", name: "plus"),
@@ -44,48 +57,46 @@ struct MathKey: Identifiable, Hashable {
         .text("x²", insert: "^2", name: "zum Quadrat"),
         .text(".", name: "Dezimalpunkt"),
         .text(",", name: "Komma zwischen Argumenten"),
+        .text("<", name: "kleiner als"),
+        .text(">", name: "größer als"),
+        .text("==", name: "gleich"),
+        .text("[", name: "eckige Klammer auf"),
+        .text("]", name: "eckige Klammer zu"),
         MathKey(id: "key-sqrt", title: "√", accessibilityName: "Quadratwurzel", action: .insert("sqrt()", cursorBack: 1))
     ]
 
-    static let functions: [MathKey] = [
-        .function(.sin, name: "Sinus"),
-        .function(.cos, name: "Kosinus"),
-        .function(.tan, name: "Tangens"),
-        .function(.asin, name: "Arkussinus"),
-        .function(.acos, name: "Arkuskosinus"),
-        .function(.atan, name: "Arkustangens"),
-        .function(.abs, name: "Betrag"),
-        .function(.sqrt, name: "Quadratwurzel"),
-        .function(.ln, name: "natürlicher Logarithmus"),
-        .function(.log10, name: "Zehnerlogarithmus"),
-        .function(.exp, name: "Exponentialfunktion"),
-        .function(.floor, name: "abrunden"),
-        .function(.ceil, name: "aufrunden"),
-        .function(.round, name: "runden"),
-        MathKey(id: "fn-min", title: "min", accessibilityName: "Minimum von zwei Werten", action: .insert("min(,)", cursorBack: 2), isFunction: true),
-        MathKey(id: "fn-max", title: "max", accessibilityName: "Maximum von zwei Werten", action: .insert("max(,)", cursorBack: 2), isFunction: true),
-        MathKey(id: "fn-mod", title: "mod", accessibilityName: "Modulo", action: .insert("mod(,)", cursorBack: 2), isFunction: true)
-    ]
+    private static let functionKeys: [MathKey] = [
+        "sin", "cos", "tan", "asin", "acos", "atan", "abs", "sqrt", "ln", "log10", "exp", "floor", "ceil", "round", "frac",
+        "min", "max", "mod", "clip", "if", "piecewise", "sum", "prod", "len", "sign"
+    ].map { MathKey.function($0) }
 
-    static let left = MathKey(id: "key-left", title: "◀", accessibilityName: "Cursor nach links", action: .moveLeft)
-    static let right = MathKey(id: "key-right", title: "▶", accessibilityName: "Cursor nach rechts", action: .moveRight)
-    static let delete = MathKey(id: "key-delete", title: "⌫", accessibilityName: "Löschen", action: .deleteBackward)
-    static let done = MathKey(id: "keyboardDone", title: "Fertig", accessibilityName: "Fertig", action: .done)
+    static let classic = MathKeyboardLayout(
+        symbols: [.text("x", name: "x"), .text("a", name: "Parameter a"), .text("b", name: "Parameter b"),
+                  .text("c", name: "Parameter c"), .text("π", insert: "pi", name: "Pi"), .text("e", name: "Eulersche Zahl e")] + operators,
+        functions: functionKeys)
+
+    static let synth = MathKeyboardLayout(
+        symbols: [.text("t", name: "Zeit t"), .text("beat", name: "Beat"), .text("bar", name: "Takt"),
+                  .text("localTime", name: "Zeit seit dem Trigger"), .text("localBeat", name: "Beats seit dem Trigger"),
+                  .text("n", name: "Triggerzähler"), .text("note", name: "Note"), .text("x", name: "x"),
+                  .text("π", insert: "pi", name: "Pi"), .text("e", name: "Eulersche Zahl e")] + operators,
+        functions: functionKeys)
 }
 
 /// Two rows: symbols/operators and functions, plus fixed cursor/done keys.
 struct MathKeyboardView: View {
+    var layout: MathKeyboardLayout = .classic
     let onKey: (MathKey) -> Void
 
     var body: some View {
         VStack(spacing: 6) {
             HStack(spacing: 6) {
-                keyRow(MathKey.symbols)
+                keyRow(layout.symbols)
                 fixedKey(.left)
                 fixedKey(.right)
             }
             HStack(spacing: 6) {
-                keyRow(MathKey.functions)
+                keyRow(layout.functions)
                 fixedKey(.delete)
                 Button {
                     onKey(.done)
@@ -121,9 +132,9 @@ struct MathKeyboardView: View {
                         onKey(key)
                     } label: {
                         Text(key.title)
-                            .font(key.isFunction ? Font.callout.weight(.semibold).monospaced() : Font.title3.weight(.semibold))
+                            .font(key.isFunction || key.title.count > 2 ? Font.callout.weight(.semibold).monospaced() : Font.title3.weight(.semibold))
                             .foregroundStyle(key.isFunction ? DemonTheme.neonGreen : DemonTheme.textPrimary)
-                            .padding(.horizontal, key.isFunction ? 10 : 6)
+                            .padding(.horizontal, key.isFunction || key.title.count > 2 ? 10 : 6)
                             .frame(minWidth: 40, minHeight: 40)
                             .background(DemonRuneShape().fill(Color.black.opacity(0.45)))
                             .overlay(DemonRuneShape().stroke(DemonTheme.metalMid.opacity(0.9), lineWidth: 1))
@@ -159,8 +170,8 @@ struct MathKeyboardView: View {
 final class MathKeyboardAccessoryView: UIInputView {
     private let host: UIHostingController<MathKeyboardView>
 
-    init(onKey: @escaping (MathKey) -> Void) {
-        host = UIHostingController(rootView: MathKeyboardView(onKey: onKey))
+    init(layout: MathKeyboardLayout = .classic, onKey: @escaping (MathKey) -> Void) {
+        host = UIHostingController(rootView: MathKeyboardView(layout: layout, onKey: onKey))
         super.init(frame: CGRect(x: 0, y: 0, width: 320, height: 104), inputViewStyle: .keyboard)
         allowsSelfSizing = true
         autoresizingMask = [.flexibleWidth]
@@ -182,10 +193,24 @@ final class MathKeyboardAccessoryView: UIInputView {
     }
 }
 
-/// Formula text field (UIKit, to insert at the cursor position) with the math keyboard.
+extension MathKeyboardAccessoryView: UIInputViewAudioFeedback {
+    var enableInputClicksWhenVisible: Bool { true }
+}
+
+/// Character offset of the cursor in a text input (for the signature help).
+private func characterOffset(in input: UITextInput, position: UITextPosition) -> Int {
+    input.offset(from: input.beginningOfDocument, to: position)
+}
+
+/// Single-line formula field (UIKit, to insert at the cursor position) with the math keyboard.
 struct FormulaTextField: UIViewRepresentable {
     @Binding var text: String
     var isInvalid: Bool
+    var cursor: Binding<Int>?
+    var layout: MathKeyboardLayout = .classic
+    var placeholder = "z. B. sin(x) oder y = 2x^2"
+    var identifier = "formulaField"
+    var accessibilityName = "Formel"
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -208,17 +233,17 @@ struct FormulaTextField: UIViewRepresentable {
         field.keyboardAppearance = .dark
         field.returnKeyType = .done
         field.clearButtonMode = .never
-        field.attributedPlaceholder = NSAttributedString(string: "z. B. sin(x) oder y = 2x^2",
+        field.attributedPlaceholder = NSAttributedString(string: placeholder,
                                                          attributes: [.foregroundColor: UIColor(DemonTheme.textTertiary)])
-        field.accessibilityIdentifier = "formulaField"
-        field.accessibilityLabel = "Formel"
-        field.accessibilityHint = "Mathematische Funktion von x eingeben"
+        field.accessibilityIdentifier = identifier
+        field.accessibilityLabel = accessibilityName
+        field.accessibilityHint = "Mathematische Formel eingeben"
         field.delegate = context.coordinator
         field.addTarget(context.coordinator, action: #selector(Coordinator.editingChanged(_:)), for: .editingChanged)
         field.setContentHuggingPriority(.defaultLow, for: .horizontal)
         field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         let coordinator = context.coordinator
-        field.inputAccessoryView = MathKeyboardAccessoryView { [weak field] key in
+        field.inputAccessoryView = MathKeyboardAccessoryView(layout: layout) { [weak field] key in
             guard let field else { return }
             coordinator.handle(key, in: field)
         }
@@ -244,11 +269,24 @@ struct FormulaTextField: UIViewRepresentable {
 
         @objc func editingChanged(_ field: UITextField) {
             parent.text = field.text ?? ""
+            reportCursor(field)
+        }
+
+        func textFieldDidChangeSelection(_ textField: UITextField) {
+            reportCursor(textField)
         }
 
         func textFieldShouldReturn(_ textField: UITextField) -> Bool {
             textField.resignFirstResponder()
             return true
+        }
+
+        private func reportCursor(_ field: UITextField) {
+            guard let cursor = parent.cursor, let position = field.selectedTextRange?.start else { return }
+            let offset = characterOffset(in: field, position: position)
+            if cursor.wrappedValue != offset {
+                cursor.wrappedValue = offset
+            }
         }
 
         func handle(_ key: MathKey, in field: UITextField) {
@@ -269,6 +307,7 @@ struct FormulaTextField: UIViewRepresentable {
                 field.resignFirstResponder()
             }
             parent.text = field.text ?? ""
+            reportCursor(field)
             UIDevice.current.playInputClick()
         }
 
@@ -280,6 +319,112 @@ struct FormulaTextField: UIViewRepresentable {
     }
 }
 
-extension MathKeyboardAccessoryView: UIInputViewAudioFeedback {
-    var enableInputClicksWhenVisible: Bool { true }
+/// Multi-line formula editor (advanced editor) with the same keyboard.
+struct FormulaTextView: UIViewRepresentable {
+    @Binding var text: String
+    var isInvalid: Bool
+    var cursor: Binding<Int>?
+    var layout: MathKeyboardLayout = .classic
+    var identifier = "formulaTextView"
+    var accessibilityName = "Formel, mehrzeilig"
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+
+    func makeUIView(context: Context) -> UITextView {
+        let view = UITextView()
+        let baseFont = UIFont.monospacedSystemFont(ofSize: 17, weight: .medium)
+        view.font = UIFontMetrics(forTextStyle: .body).scaledFont(for: baseFont, maximumPointSize: 30)
+        view.adjustsFontForContentSizeCategory = true
+        view.textColor = .white
+        view.backgroundColor = .clear
+        view.tintColor = UIColor(DemonTheme.neonGreen)
+        view.autocorrectionType = .no
+        view.autocapitalizationType = .none
+        view.spellCheckingType = .no
+        view.smartDashesType = .no
+        view.smartQuotesType = .no
+        view.smartInsertDeleteType = .no
+        view.keyboardType = .asciiCapable
+        view.keyboardAppearance = .dark
+        view.isScrollEnabled = false
+        view.textContainerInset = UIEdgeInsets(top: 8, left: 4, bottom: 8, right: 4)
+        view.accessibilityIdentifier = identifier
+        view.accessibilityLabel = accessibilityName
+        view.accessibilityHint = "Eine Definition pro Zeile; die Zeile ohne Gleichheitszeichen ist die Ausgabe"
+        view.delegate = context.coordinator
+        view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        let coordinator = context.coordinator
+        view.inputAccessoryView = MathKeyboardAccessoryView(layout: layout) { [weak view] key in
+            guard let view else { return }
+            coordinator.handle(key, in: view)
+        }
+        view.text = text
+        return view
+    }
+
+    func updateUIView(_ view: UITextView, context: Context) {
+        context.coordinator.parent = self
+        if view.text != text {
+            view.text = text
+        }
+        view.accessibilityValue = isInvalid ? "\(text), ungültig" : text
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
+        let width = proposal.width ?? 320
+        let size = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+        return CGSize(width: width, height: max(88, size.height))
+    }
+
+    @MainActor
+    final class Coordinator: NSObject, UITextViewDelegate {
+        var parent: FormulaTextView
+
+        init(parent: FormulaTextView) {
+            self.parent = parent
+        }
+
+        func textViewDidChange(_ textView: UITextView) {
+            parent.text = textView.text ?? ""
+            reportCursor(textView)
+        }
+
+        func textViewDidChangeSelection(_ textView: UITextView) {
+            reportCursor(textView)
+        }
+
+        private func reportCursor(_ view: UITextView) {
+            guard let cursor = parent.cursor, let position = view.selectedTextRange?.start else { return }
+            let offset = characterOffset(in: view, position: position)
+            if cursor.wrappedValue != offset {
+                cursor.wrappedValue = offset
+            }
+        }
+
+        func handle(_ key: MathKey, in view: UITextView) {
+            switch key.action {
+            case .insert(let text, let cursorBack):
+                view.insertText(text)
+                if cursorBack > 0, let position = view.selectedTextRange?.start,
+                   let target = view.position(from: position, offset: -cursorBack) {
+                    view.selectedTextRange = view.textRange(from: target, to: target)
+                }
+            case .moveLeft, .moveRight:
+                let offset = key.action == .moveLeft ? -1 : 1
+                if let range = view.selectedTextRange,
+                   let target = view.position(from: offset < 0 ? range.start : range.end, offset: offset) {
+                    view.selectedTextRange = view.textRange(from: target, to: target)
+                }
+            case .deleteBackward:
+                view.deleteBackward()
+            case .done:
+                view.resignFirstResponder()
+            }
+            parent.text = view.text ?? ""
+            reportCursor(view)
+            UIDevice.current.playInputClick()
+        }
+    }
 }
