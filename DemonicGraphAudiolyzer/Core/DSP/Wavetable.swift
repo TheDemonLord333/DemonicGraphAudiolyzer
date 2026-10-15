@@ -118,6 +118,31 @@ struct BandLimitedWavetableBank: Sendable {
         }
     }
 
+    /// Band-limited sawtooth (all harmonics, 1/n).
+    static func sawtooth(sampleRate: Double) -> BandLimitedWavetableBank {
+        BandLimitedWavetableBank(sampleRate: sampleRate) { n in
+            (0, (n % 2 == 1 ? 1.0 : -1.0) / Double(n))
+        }
+    }
+
+    /// Band-limited square (odd harmonics, 1/n).
+    static func square(sampleRate: Double) -> BandLimitedWavetableBank {
+        BandLimitedWavetableBank(sampleRate: sampleRate) { n in
+            n % 2 == 1 ? (0, 1 / Double(n)) : (0, 0)
+        }
+    }
+
+    /// Bank built from one period of a (time-independent) formula: harmonics from its FFT,
+    /// every table keeps only the harmonics below the Nyquist limit of its band.
+    static func fromPeriod(_ period: [Double], sampleRate: Double) -> BandLimitedWavetableBank {
+        let fft = FFT(size: period.count)
+        let spectrum = fft.harmonics(of: period)
+        let available = min(spectrum.cosine.count, spectrum.sine.count) - 1
+        return BandLimitedWavetableBank(sampleRate: sampleRate) { n in
+            n <= available ? (spectrum.cosine[n], spectrum.sine[n]) : (0, 0)
+        }
+    }
+
     /// Overtone-rich "demonic" synthesizer timbre: sawtooth-like 1/n spectrum with
     /// slightly weaker even harmonics and a gentle high-frequency roll-off.
     static func rich(sampleRate: Double) -> BandLimitedWavetableBank {

@@ -170,7 +170,7 @@ struct FormulaParserTests {
 
     @Test("Mitgelieferte Presets sind gültig")
     func builtInPresetsParse() throws {
-        for preset in BuiltInPresets.all {
+        for preset in BuiltInPresets.classic {
             let formula = try parse(preset.formula)
             #expect(formula.usesX, "\(preset.name)")
             #expect(preset.settings.validationIssue == nil, "\(preset.name)")

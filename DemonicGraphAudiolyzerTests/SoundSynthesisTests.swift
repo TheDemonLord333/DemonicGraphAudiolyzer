@@ -165,7 +165,7 @@ struct SoundSynthesisTests {
 
     @Test("Blockweises Rendern ist identisch mit vollständigem Rendern (Vorschau = Export)")
     func chunkInvariance() throws {
-        for mode in SoundMode.allCases {
+        for mode in SoundMode.classic {
             let p = try plan("sin(4*x)exp(-0.2abs(x))") {
                 $0.mode = mode
                 $0.duration = 1.5

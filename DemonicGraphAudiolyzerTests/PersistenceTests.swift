@@ -110,8 +110,8 @@ struct PersistenceTests {
         let container = PersistenceController.makeContainer(inMemory: true)
         let context = ModelContext(container)
         #expect(try context.fetch(FetchDescriptor<SavedPreset>()).isEmpty)
-        #expect(BuiltInPresets.all.count == 7)
-        #expect(Set(BuiltInPresets.all.map(\.id)).count == 7)
+        #expect(BuiltInPresets.classic.count == 7)
+        #expect(Set(BuiltInPresets.all.map(\.id)).count == BuiltInPresets.all.count)
     }
 }
 #endif

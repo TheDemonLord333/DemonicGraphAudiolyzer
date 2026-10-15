@@ -9,24 +9,75 @@ struct SoundPreset: Codable, Equatable, Identifiable, Sendable {
     var formula: String
     var parameters: FormulaParameters
     var settings: SoundSettings
+    /// Project of the formula synthesizer / pendulum mode (nil for the classic modes).
+    var project: SynthProject?
+    /// Group in the preset list (built-in presets).
+    var category: PresetCategory?
 
     init(id: UUID = UUID(), name: String, summary: String = "", formula: String,
-         parameters: FormulaParameters = FormulaParameters(), settings: SoundSettings = SoundSettings()) {
+         parameters: FormulaParameters = FormulaParameters(), settings: SoundSettings = SoundSettings(),
+         project: SynthProject? = nil, category: PresetCategory? = nil) {
         self.id = id
+        self.category = category
         self.name = name
         self.summary = summary
         self.formula = formula
         self.parameters = parameters
         self.settings = settings
+        self.project = project
+    }
+
+    var isSynth: Bool { !settings.mode.isClassic }
+}
+
+enum PresetCategory: String, Codable, CaseIterable, Identifiable, Sendable {
+    case classic
+    case formulas
+    case sequencers
+    case generators
+    case combinations
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .classic: return "Klassische Beispiele"
+        case .formulas: return "Formel-Presets"
+        case .sequencers: return "Mathematische Sequencer"
+        case .generators: return "Pendel, Riser und Beschleunigung"
+        case .combinations: return "Kombinationen"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .classic: return "sparkles"
+        case .formulas: return "function"
+        case .sequencers: return "square.grid.3x3"
+        case .generators: return "metronome"
+        case .combinations: return "square.stack.3d.down.forward"
+        }
     }
 }
 
 /// Examples shipped with the app. They live in code and are never inserted into the
 /// database, so they are not re-created on every launch and cannot be duplicated.
 enum BuiltInPresets {
-    static let all: [SoundPreset] = [
+    /// The original examples of "Graph vertonen" and "Formel als Klangwelle".
+    static let classic: [SoundPreset] = [
         gentleWave, doubleWave, steps, dampedWave, waveCrest, experiment, parameterWave
-    ]
+    ].map { preset in
+        var copy = preset
+        copy.category = .classic
+        return copy
+    }
+
+    /// All built-in presets: classic examples, formula presets, sequencers, generators, combinations.
+    static let all: [SoundPreset] = classic + SynthPresets.all
+
+    static func preset(withID id: UUID) -> SoundPreset? {
+        all.first { $0.id == id }
+    }
 
     // Stable identifiers so selection state survives restarts.
     static let gentleWave = SoundPreset(

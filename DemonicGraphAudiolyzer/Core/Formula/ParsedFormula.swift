@@ -1,17 +1,27 @@
 import Foundation
 
-/// A successfully parsed formula together with its source text.
+/// A successfully parsed formula of the classic modes ("Graph vertonen", "Formel als
+/// Klangwelle") together with its source text. The source may be a single line (simple editor)
+/// or a multi-line program with definitions (advanced editor).
 struct ParsedFormula: Equatable, Sendable {
     let source: String
     let root: FormulaNode
+    let program: SyntaxProgram
 
     var usesX: Bool { root.containsX }
     var usedParameters: Set<FormulaVariable> { root.usedParameters }
+    var warnings: [FormulaWarning] { program.warnings }
+    var isMultiLine: Bool { program.lineCount > 1 }
+
+    static func == (lhs: ParsedFormula, rhs: ParsedFormula) -> Bool {
+        lhs.source == rhs.source && lhs.root == rhs.root
+    }
 
     static func parse(_ source: String) -> Result<ParsedFormula, FormulaError> {
         do {
-            let root = try FormulaParser.parse(source)
-            return .success(ParsedFormula(source: source, root: root))
+            let program = try FormulaParser.parseProgram(source, environment: .classic)
+            let root = try FormulaBinder.bind(program, environment: .classic).root
+            return .success(ParsedFormula(source: source, root: root, program: program))
         } catch let error as FormulaError {
             return .failure(error)
         } catch {
@@ -23,13 +33,17 @@ struct ParsedFormula: Equatable, Sendable {
         CompiledFormula(formula: self, parameters: parameters)
     }
 
-    /// The formula without a `y =` / `f(x) =` prefix, for display as `f(x) = …`.
+    /// The output expression as written (without `y =` / `f(x) =`), for display as `f(x) = …`.
     var displayBody: String {
-        let trimmed = source.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let equals = trimmed.firstIndex(of: "=") {
-            return String(trimmed[trimmed.index(after: equals)...]).trimmingCharacters(in: .whitespaces)
+        guard let output = program.outputStatement else {
+            return source.trimmingCharacters(in: .whitespacesAndNewlines)
         }
-        return trimmed
+        let characters = Array(source)
+        let range = output.expression.range
+        let start = max(0, min(range.start, characters.count))
+        let end = max(start, min(range.end, characters.count))
+        let text = String(characters[start..<end]).trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.isEmpty ? source : text
     }
 }
 
@@ -37,24 +51,30 @@ struct ParsedFormula: Equatable, Sendable {
 struct CompiledFormula: Sendable {
     let formula: ParsedFormula
     let parameters: FormulaParameters
-    private let function: @Sendable (Double) -> Double
+    private let program: CompiledProgram
 
     init(formula: ParsedFormula, parameters: FormulaParameters) {
         self.formula = formula
         self.parameters = parameters
-        self.function = formula.root.compile(parameters: parameters)
+        self.program = CompiledProgram(formula.root, fixed: [.a: parameters.a, .b: parameters.b, .c: parameters.c])
     }
 
     /// f(x); returns NaN for undefined points (non-finite results are mapped to NaN).
     @inline(__always)
     func callAsFunction(_ x: Double) -> Double {
-        let value = function(x)
+        let value = raw(x)
         return value.isFinite ? value : .nan
     }
 
     /// Raw result including ±infinity (used where the sign of a pole matters).
-    @inline(__always)
     func raw(_ x: Double) -> Double {
-        function(x)
+        if let constant = program.constant { return constant }
+        let count = program.slotCount
+        return withUnsafeTemporaryAllocation(of: Double.self, capacity: count) { buffer in
+            let environment = buffer.baseAddress!
+            environment.initialize(repeating: 0, count: count)
+            environment[FormulaVariable.x.slot] = x
+            return program.evaluate(environment)
+        }
     }
 }

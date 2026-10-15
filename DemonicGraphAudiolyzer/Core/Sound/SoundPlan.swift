@@ -112,6 +112,8 @@ struct SoundPlan: Sendable {
                                               end: settings.sectionEnd,
                                               baseFrequency: settings.baseFrequency,
                                               sampleRate: configuration.sampleRate)
+        case .synthesizer, .pendulum:
+            throw SoundPlanError.invalidSettings("Dieser Modus wird vom Synthesizer-Renderkern erzeugt.")
         }
     }
 
@@ -232,6 +234,8 @@ struct SoundPlan: Sendable {
                 return PlaybackReadout(time: clampedTime, progress: progress, x: x, y: y.isNaN ? nil : y, frequency: nil)
             }
             return PlaybackReadout(time: clampedTime, progress: progress, x: x, y: y, frequency: targetFrequency(forY: y))
+        case .synthesizer, .pendulum:
+            return PlaybackReadout(time: clampedTime, progress: progress, x: 0, y: nil, frequency: nil)
         case .waveform:
             let settings = configuration.settings
             let phase = waveformPhase(atFrame: frame)

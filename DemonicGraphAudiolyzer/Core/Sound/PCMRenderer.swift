@@ -63,6 +63,8 @@ final class PCMRenderer {
             renderGraph(into: output, count: count)
         case .waveform:
             renderWaveform(into: output, count: count)
+        case .synthesizer, .pendulum:
+            output.update(repeating: 0, count: count)
         }
         position += count
         return count
