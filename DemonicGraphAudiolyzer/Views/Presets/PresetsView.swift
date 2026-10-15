@@ -23,7 +23,7 @@ struct PresetsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            LazyVStack(alignment: .leading, spacing: 18) {
                 DemonHeader(compact: true)
                     .padding(.top, 4)
 
@@ -42,6 +42,7 @@ struct PresetsView: View {
                                    detail: "Geändert: " + saved.modifiedAt.formatted(.dateTime.locale(NumberText.locale).day().month().year().hour().minute()),
                                    appearance: appearance,
                                    onLoad: { load(saved.preset) },
+                                   onAdd: canCombine(saved.preset) ? { model.importVoices(from: saved.preset) } : nil,
                                    onRename: {
                                        renameText = saved.name
                                        renaming = saved
@@ -51,9 +52,16 @@ struct PresetsView: View {
                     }
                 }
 
-                DemonSectionHeader(title: "Mitgelieferte Beispiele", systemImage: "sparkles")
-                ForEach(BuiltInPresets.all) { preset in
-                    PresetCard(preset: preset, detail: nil, appearance: appearance, onLoad: { load(preset) })
+                ForEach(PresetCategory.allCases) { category in
+                    let presets = BuiltInPresets.all.filter { ($0.category ?? .classic) == category }
+                    if !presets.isEmpty {
+                        DemonSectionHeader(title: category.title, systemImage: category.icon)
+                            .padding(.top, 4)
+                        ForEach(presets) { preset in
+                            PresetCard(preset: preset, detail: nil, appearance: appearance, onLoad: { load(preset) },
+                                       onAdd: canCombine(preset) ? { model.importVoices(from: preset) } : nil)
+                        }
+                    }
                 }
 
                 if let errorMessage {
@@ -70,7 +78,9 @@ struct PresetsView: View {
             Button("Speichern") { saveCurrent() }
             Button("Abbrechen", role: .cancel) {}
         } message: {
-            Text("Speichert Formel, Parameter, Klangmodus, Bereiche, Frequenzen, Klangfarbe und Dauer.")
+            Text(model.isSynthMode
+                 ? "Speichert das ganze Projekt: Tempo, Takte, Bedeutung von x, alle Stimmen mit Formeln, Einheiten, Auslösern, Parametern und Pegeln."
+                 : "Speichert Formel, Parameter, Klangmodus, Bereiche, Frequenzen, Klangfarbe und Dauer.")
         }
         .alert("Preset umbenennen", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
             TextField("Name", text: $renameText)
@@ -97,13 +107,16 @@ struct PresetsView: View {
 
     private var saveCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Aktuell: f(x) = \(model.formulaDisplayBody)")
+            Text(model.isSynthMode ? "Aktuell: \(model.presetTitle)" : "Aktuell: f(x) = \(model.formulaDisplayBody)")
                 .font(.callout.weight(.semibold).monospaced())
                 .foregroundStyle(DemonTheme.textPrimary)
                 .lineLimit(2)
-            Text("\(model.settings.mode.title) · \(NumberText.seconds(model.settings.duration))")
+            Text(currentFacts)
                 .font(.caption)
                 .foregroundStyle(DemonTheme.textTertiary)
+            if model.isSynthMode {
+                DemonCaption("Mit „Stimmen hinzufügen“ an einem Preset werden dessen Stimmen in das aktuelle Projekt übernommen (Kombinationen).")
+            }
             Button {
                 newName = suggestedName
                 showSaveAlert = true
@@ -112,7 +125,7 @@ struct PresetsView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(DemonChipButtonStyle(tint: DemonTheme.neonGreen))
-            .disabled(model.parsedFormula == nil)
+            .disabled(!model.isSynthMode && model.parsedFormula == nil)
             .accessibilityIdentifier("savePresetButton")
         }
         .demonCard(crest: true)
@@ -120,6 +133,26 @@ struct PresetsView: View {
 
     private var suggestedName: String {
         "Preset \(savedPresets.count + 1)"
+    }
+
+    private var currentFacts: String {
+        if model.isSynthMode {
+            let project = model.project
+            return "\(model.settings.mode.title) · \(project.voices.count) Stimmen · \(NumberText.decimal(project.tempo.bpm, fractionDigits: 0)) BPM · \(NumberText.seconds(project.duration))"
+        }
+        return "\(model.settings.mode.title) · \(NumberText.seconds(model.settings.duration))"
+    }
+
+    private var savedSummary: String {
+        if model.isSynthMode {
+            return "\(model.settings.mode.title) · \(model.project.voices.count) Stimmen"
+        }
+        return model.settings.mode.title
+    }
+
+    /// Voices of a synthesizer preset can be added to the current synthesizer project.
+    private func canCombine(_ preset: SoundPreset) -> Bool {
+        model.isSynthMode && preset.isSynth && preset.project != nil && model.canAddVoice
     }
 
     // MARK: Actions
@@ -131,9 +164,10 @@ struct PresetsView: View {
 
     private func saveCurrent() {
         do {
-            var preset = model.currentPreset()
-            preset.summary = model.settings.mode.title
+            var preset = model.currentPreset(named: newName)
+            preset.summary = savedSummary
             try PresetStore.save(preset, name: newName, in: context)
+            model.markSaved(as: newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : newName)
             errorMessage = nil
         } catch {
             errorMessage = "Speichern fehlgeschlagen: \(error.localizedDescription)"
@@ -153,8 +187,9 @@ struct PresetsView: View {
     private func overwrite(_ saved: SavedPreset) {
         do {
             var preset = model.currentPreset(named: saved.name)
-            preset.summary = model.settings.mode.title
+            preset.summary = savedSummary
             try PresetStore.overwrite(saved, with: preset, in: context)
+            model.markSaved(as: saved.name)
         } catch {
             errorMessage = "Überschreiben fehlgeschlagen: \(error.localizedDescription)"
         }
@@ -177,21 +212,28 @@ struct PresetCard: View {
     let detail: String?
     var appearance: GraphAppearance
     var onLoad: () -> Void
+    var onAdd: (() -> Void)?
     var onRename: (() -> Void)?
     var onOverwrite: (() -> Void)?
     var onDelete: (() -> Void)?
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            MiniGraphView(formula: preset.formula, parameters: preset.parameters,
-                          xRange: previewRange, section: preset.settings.mode == .waveform ? sectionRange : nil,
-                          appearance: appearance)
-                .frame(width: 92, height: 68)
+            Group {
+                if preset.isSynth, let project = preset.project {
+                    MiniSynthPreview(project: project, appearance: appearance)
+                } else {
+                    MiniGraphView(formula: preset.formula, parameters: preset.parameters,
+                                  xRange: previewRange, section: preset.settings.mode == .waveform ? sectionRange : nil,
+                                  appearance: appearance)
+                }
+            }
+            .frame(width: 92, height: 68)
             VStack(alignment: .leading, spacing: 5) {
                 Text(preset.name)
                     .font(.headline)
                     .foregroundStyle(DemonTheme.textPrimary)
-                Text("f(x) = \(preset.formula)")
+                Text(formulaLine)
                     .font(.caption.weight(.semibold).monospaced())
                     .foregroundStyle(DemonTheme.green)
                     .lineLimit(2)
@@ -216,6 +258,15 @@ struct PresetCard: View {
                     .buttonStyle(DemonChipButtonStyle(tint: DemonTheme.neonGreen))
                     .accessibilityLabel("\(preset.name) laden")
                     .accessibilityIdentifier("loadPreset-\(preset.name)")
+
+                    if let onAdd {
+                        Button(action: onAdd) {
+                            Label("Stimmen hinzufügen", systemImage: "plus.square.on.square")
+                        }
+                        .buttonStyle(DemonChipButtonStyle())
+                        .accessibilityLabel("Stimmen von \(preset.name) zum aktuellen Projekt hinzufügen")
+                        .accessibilityIdentifier("addPresetVoices-\(preset.name)")
+                    }
 
                     if onRename != nil || onDelete != nil {
                         Menu {
@@ -259,6 +310,14 @@ struct PresetCard: View {
         preset.settings.sectionStart...max(preset.settings.sectionEnd, preset.settings.sectionStart + 1e-6)
     }
 
+    private var formulaLine: String {
+        if preset.isSynth, let project = preset.project {
+            let names = project.voices.prefix(4).map(\.name).joined(separator: ", ")
+            return "\(project.voices.count) \(project.voices.count == 1 ? "Stimme" : "Stimmen"): \(names)\(project.voices.count > 4 ? " …" : "")"
+        }
+        return "f(x) = \(preset.formula)"
+    }
+
     private var facts: String {
         let settings = preset.settings
         switch settings.mode {
@@ -266,6 +325,10 @@ struct PresetCard: View {
             return "\(settings.mode.title) · \(settings.timbre.title) · \(NumberText.seconds(settings.duration))"
         case .waveform:
             return "\(settings.mode.title) · \(NumberText.frequency(settings.baseFrequency)) · \(NumberText.seconds(settings.duration))"
+        case .synthesizer, .pendulum:
+            guard let project = preset.project else { return settings.mode.title }
+            let tempo = project.tempo
+            return "\(settings.mode.title) · \(NumberText.decimal(tempo.bpm, fractionDigits: 0)) BPM · \(tempo.bars) Takte · \(NumberText.seconds(tempo.duration))"
         }
     }
 }
@@ -326,5 +389,68 @@ struct MiniGraphView: View {
         return await Task.detached(priority: .utility) {
             GraphSampler.sample({ compiled($0) }, over: range, options: GraphSampler.Options(baseSamples: 160))
         }.value
+    }
+}
+
+/// Small preview of a synthesizer preset: the first lanes of its multi-lane graph, computed in
+/// the background at a low sample rate.
+struct MiniSynthPreview: View {
+    let project: SynthProject
+    var appearance: GraphAppearance
+
+    @State private var data: SynthGraphData?
+
+    var body: some View {
+        Canvas { context, size in
+            let rect = CGRect(origin: .zero, size: size)
+            context.fill(Path(rect), with: .color(appearance.background))
+            guard let data else { return }
+            let lanes = Array(data.lanes.prefix(2))
+            guard !lanes.isEmpty else { return }
+            let laneHeight = size.height / CGFloat(lanes.count)
+            let span = data.xRange.upperBound - data.xRange.lowerBound
+            for (index, lane) in lanes.enumerated() {
+                let laneRect = CGRect(x: 0, y: CGFloat(index) * laneHeight, width: size.width, height: laneHeight).insetBy(dx: 4, dy: 4)
+                if lane.kind == .events {
+                    for (row, voice) in data.voiceOrder.enumerated() {
+                        let events = data.voiceEvents[voice.id] ?? []
+                        let rows = max(data.voiceOrder.count, 1)
+                        let y0 = laneRect.minY + laneRect.height * CGFloat(row) / CGFloat(rows)
+                        let y1 = y0 + laneRect.height / CGFloat(rows) * 0.8
+                        var ticks = Path()
+                        for event in events.prefix(400) {
+                            let x = data.mapping.x(atFrame: Double(event.frame))
+                            let px = laneRect.minX + CGFloat((x - data.xRange.lowerBound) / max(span, 1e-9)) * laneRect.width
+                            ticks.move(to: CGPoint(x: px, y: y0))
+                            ticks.addLine(to: CGPoint(x: px, y: y1))
+                        }
+                        context.stroke(ticks, with: .color(voice.color.color), lineWidth: 1)
+                    }
+                    continue
+                }
+                var low = lane.yRange.lowerBound
+                var high = lane.yRange.upperBound
+                if !(high - low > 1e-9) {
+                    low -= 1
+                    high += 1
+                }
+                let viewport = GraphViewport(xMin: data.xRange.lowerBound, xMax: data.xRange.upperBound, yMin: low, yMax: high)
+                guard viewport.isValid else { continue }
+                let transform = PlotTransform(viewport: viewport, rect: laneRect)
+                for curve in lane.curves {
+                    let path = GraphRenderer.curvePath(curve.curve, transform: transform)
+                    context.stroke(path, with: .color(curve.color.color), style: StrokeStyle(lineWidth: 1.4, lineCap: .round, lineJoin: .round))
+                }
+            }
+        }
+        .clipShape(DemonPanelShape(cornerCut: 7, spike: 0))
+        .overlay(DemonPanelShape(cornerCut: 7, spike: 0).stroke(DemonTheme.metalStroke, lineWidth: 1))
+        .task(id: project) {
+            let project = self.project
+            data = await Task.detached(priority: .utility) {
+                SynthAnalysis.graph(SynthCompilation(project: project, sampleRate: 8_000), baseSamples: 90)
+            }.value
+        }
+        .accessibilityHidden(true)
     }
 }

@@ -1,18 +1,48 @@
 import Foundation
 
-/// The two sound modes of the app.
+/// The modes of "Graph & Klang". Saved projects keep their mode: "graph" and "waveform"
+/// are the two original modes and keep their meaning.
 enum SoundMode: String, Codable, CaseIterable, Identifiable, Sendable {
     /// "Graph vertonen": the height of the curve controls the pitch.
     case graph
     /// "Formel als Klangwelle": the function itself is the waveform.
     case waveform
+    /// "Formel-Synthesizer": several voices with explicit formula roles and musical time.
+    case synthesizer
+    /// "Pendel": six pendulums trigger notes at their midline crossings.
+    case pendulum
 
     var id: String { rawValue }
+
+    /// The two original modes rendered by `PCMRenderer`.
+    static let classic: [SoundMode] = [.graph, .waveform]
+
+    var isClassic: Bool { self == .graph || self == .waveform }
 
     var title: String {
         switch self {
         case .graph: return "Graph vertonen"
         case .waveform: return "Formel als Klangwelle"
+        case .synthesizer: return "Formel-Synthesizer"
+        case .pendulum: return "Pendel"
+        }
+    }
+
+    var shortTitle: String {
+        switch self {
+        case .graph: return "Graph"
+        case .waveform: return "Klangwelle"
+        case .synthesizer: return "Synthesizer"
+        case .pendulum: return "Pendel"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .graph: return "chart.xyaxis.line"
+        case .waveform: return "waveform"
+        case .synthesizer: return "slider.vertical.3"
+        case .pendulum: return "metronome"
         }
     }
 
@@ -22,6 +52,10 @@ enum SoundMode: String, Codable, CaseIterable, Identifiable, Sendable {
             return "Ein Punkt wandert von links nach rechts über die Kurve. Je höher die Kurve, desto höher der Ton. Definitionslücken werden sanft stummgeschaltet."
         case .waveform:
             return "Hier wird die Kurve selbst zur Klangwelle. Die Grundfrequenz bestimmt, wie oft der gewählte Abschnitt pro Sekunde wiederholt wird."
+        case .synthesizer:
+            return "Mehrere Stimmen mit gemeinsamer musikalischer Zeit. Jede Formel hat eine ausdrückliche Rolle: Tonhöhe, Amplitude oder Audiosignal."
+        case .pendulum:
+            return "Sechs Pendel schwingen mit 6 bis 11 Schwingungen in 16 Beats und lösen beim Mitteldurchgang ihre Note aus."
         }
     }
 }
@@ -141,6 +175,8 @@ struct SoundSettings: Codable, Equatable, Hashable, Sendable {
             if !(sectionEnd > sectionStart) {
                 return "Der Funktionsabschnitt ist ungültig: Der Anfang muss kleiner als das Ende sein."
             }
+        case .synthesizer, .pendulum:
+            break
         }
         return nil
     }

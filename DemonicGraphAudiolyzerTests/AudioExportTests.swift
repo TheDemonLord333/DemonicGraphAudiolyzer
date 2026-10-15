@@ -93,7 +93,7 @@ struct AudioExportTests {
     func previewMatchesExport() throws {
         let directory = Self.temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
-        for mode in SoundMode.allCases {
+        for mode in SoundMode.classic {
             let configuration = try Self.configuration("sin(4*x)exp(-0.2abs(x))", duration: 2, mode: mode)
             // Preview buffer exactly as the player receives it.
             guard case .success(let preview) = PreviewRenderer.render(configuration) else {

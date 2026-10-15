@@ -21,13 +21,15 @@ enum PreferenceKey {
     static let exportMP3Quality = "export.mp3Quality"
 
     static let selectedTab = "ui.selectedTab"
+    static let showTrails = "graph.showTrails"
+    static let showSnippet = "graph.showSignalSnippet"
     static let lastState = "session.lastState.v1"
 
     static let all: [String] = [
         lightGraph, showGrid, showPreview, showCursorLine, defaultAutoFitY,
         defaultDuration, defaultVolume, defaultLoop, defaultLevel,
         exportFormat, exportSampleRate, exportWAVBitDepth, exportAACBitrate, exportMP3Bitrate, exportMP3Quality,
-        selectedTab, lastState
+        selectedTab, lastState, showTrails, showSnippet
     ]
 
     /// Deterministic start for UI tests: forget all stored preferences.
@@ -99,18 +101,27 @@ struct SessionState: Codable, Equatable, Sendable {
     var volume: Double
     var isLooping: Bool
     var slowMotionWaveform: Bool
+    /// Working projects of the synthesizer and the pendulum mode (kept while switching modes).
+    var synthProject: SynthProject?
+    var pendulumProject: SynthProject?
+    /// Classic formula while a synthesizer mode is active.
+    var classicFormula: String?
 
     private enum CodingKeys: String, CodingKey {
-        case preset, viewport, autoFitY, volume, isLooping, slowMotionWaveform
+        case preset, viewport, autoFitY, volume, isLooping, slowMotionWaveform, synthProject, pendulumProject, classicFormula
     }
 
-    init(preset: SoundPreset, viewport: GraphViewport, autoFitY: Bool, volume: Double, isLooping: Bool, slowMotionWaveform: Bool) {
+    init(preset: SoundPreset, viewport: GraphViewport, autoFitY: Bool, volume: Double, isLooping: Bool, slowMotionWaveform: Bool,
+         synthProject: SynthProject? = nil, pendulumProject: SynthProject? = nil, classicFormula: String? = nil) {
         self.preset = preset
         self.viewport = viewport
         self.autoFitY = autoFitY
         self.volume = volume
         self.isLooping = isLooping
         self.slowMotionWaveform = slowMotionWaveform
+        self.synthProject = synthProject
+        self.pendulumProject = pendulumProject
+        self.classicFormula = classicFormula
     }
 
     init(from decoder: Decoder) throws {
@@ -121,6 +132,9 @@ struct SessionState: Codable, Equatable, Sendable {
         volume = (try? container.decode(Double.self, forKey: .volume)) ?? 0.6
         isLooping = (try? container.decode(Bool.self, forKey: .isLooping)) ?? false
         slowMotionWaveform = (try? container.decode(Bool.self, forKey: .slowMotionWaveform)) ?? false
+        synthProject = try? container.decodeIfPresent(SynthProject.self, forKey: .synthProject)
+        pendulumProject = try? container.decodeIfPresent(SynthProject.self, forKey: .pendulumProject)
+        classicFormula = try? container.decodeIfPresent(String.self, forKey: .classicFormula)
     }
 }
 

@@ -9,6 +9,8 @@ struct SettingsView: View {
     @AppStorage(PreferenceKey.showGrid) private var showGrid = true
     @AppStorage(PreferenceKey.showPreview) private var showPreview = true
     @AppStorage(PreferenceKey.showCursorLine) private var showCursorLine = true
+    @AppStorage(PreferenceKey.showTrails) private var showTrails = true
+    @AppStorage(PreferenceKey.showSnippet) private var showSnippet = true
 
     @AppStorage(PreferenceKey.defaultDuration) private var defaultDuration = 10.0
     @AppStorage(PreferenceKey.defaultVolume) private var defaultVolume = 0.6
@@ -58,6 +60,10 @@ struct SettingsView: View {
             Toggle("Senkrechte Positionslinie", isOn: $showCursorLine)
                 .toggleStyle(DemonToggleStyle())
             Toggle("y-Bereich automatisch anpassen", isOn: Binding(get: { model.autoFitY }, set: { model.setAutoFitY($0) }))
+                .toggleStyle(DemonToggleStyle())
+            Toggle("Leuchtspuren im Mehrspur-Graphen", isOn: $showTrails)
+                .toggleStyle(DemonToggleStyle())
+            Toggle("Audioausschnitt mit Millisekundenachse", isOn: $showSnippet)
                 .toggleStyle(DemonToggleStyle())
         }
         .font(.subheadline.weight(.semibold))
@@ -137,7 +143,19 @@ struct SoundModeExplanation: View {
                 "Die Welle wird gleichanteilfrei gemacht, auf den Pegel normalisiert und bandbegrenzt. Sprünge zwischen Ende und Anfang werden dabei geglättet; undefinierte Stellen zählen als 0.",
                 "Bei hohen Frequenzen ist ein wandernder Cursor nicht darstellbar – optional zeigt die „Zeitlupe der Wellenform“ ihn deutlich verlangsamt."
             ])
-            Text("Das Audioverfahren des Referenzvideos ist nicht bekannt; die App setzt diese beiden klar definierten Verfahren um und behauptet keine exakte Rekonstruktion.")
+            explanation(title: SoundMode.synthesizer.title, icon: SoundMode.synthesizer.icon, lines: [
+                SoundMode.synthesizer.explanation,
+                "Musikalische Zeit: Tempo (BPM), Beats pro Takt und Takte legen die Länge fest. In den Formeln stehen t (Sekunden), beat, bar, beatInBar, localTime und localBeat (seit dem letzten Auslösen) zur Verfügung – samplegenau aus der Audiouhr.",
+                "Rollen: Die Tonhöhe hat eine sichtbare Einheit (Hz, Halbtöne, Oktaven oder Graph → Ton), die Amplitude ist linear oder in dB, ein Audiosignal wird gleichanteilfrei gemacht, normalisiert und überabgetastet gefiltert.",
+                "Auslöser: Dauerton, Rhythmusmuster, beschleunigte Wiederholung, Pendel oder mathematische Sequencer (Fibonacci, Pascal, Quintenzirkel, Tritonus).",
+                "Mischung: Stimmen werden als Signale addiert (Reserve 1/√N), ein weicher Begrenzer schützt vor Übersteuerung. Vorschau und Export sind identisch."
+            ])
+            explanation(title: SoundMode.pendulum.title, icon: SoundMode.pendulum.icon, lines: [
+                SoundMode.pendulum.explanation,
+                "position = cos(2π · N · beat / P). Beim Mitteldurchgang (position = 0) erklingt die Note des Pendels, in einer oder beiden Richtungen.",
+                "Die Auslösezeitpunkte werden analytisch berechnet und nicht aus Bildern abgetastet – ausgelassene Bilder verlieren oder verdoppeln keinen Ton."
+            ])
+            Text("Die Audioverfahren der Referenzvideos sind nicht bekannt; die App setzt klar definierte Verfahren um und behauptet keine exakte Reproduktion der Originalspuren.")
                 .font(.caption)
                 .foregroundStyle(DemonTheme.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -166,14 +184,18 @@ struct SoundModeExplanation: View {
 }
 
 struct FormulaSyntaxReference: View {
+    @Environment(AudiolyzerModel.self) private var model
+
     private let rows: [(String, String)] = [
         ("Schreibweisen", "sin(x) · y = sin(x) · f(x) = sin(x)"),
-        ("Variable und Parameter", "x sowie a, b, c (mit Reglern)"),
+        ("Variablen", "x sowie a, b, c (klassisch); t, beat, bar, beatInBar, localTime, localBeat, n, note … (Synthesizer)"),
         ("Konstanten", "pi oder π, e"),
-        ("Operatoren", "+  −  *  /  ^  und Klammern"),
+        ("Operatoren", "+  −  *  /  ^  und Klammern; Vergleiche < <= > >= == !=; and, or, not"),
         ("Rangfolge", "-x^2 = -(x^2), 2^3^2 = 2^(3^2)"),
         ("Implizite Multiplikation", "2x, 2sin(x), bx, (x+1)(x-1)"),
-        ("Funktionen", "sin cos tan asin acos atan abs sqrt ln log10 exp floor ceil round min max mod"),
+        ("Fallunterscheidungen", "if(Bedingung, dann, sonst) · piecewise(b1, w1, b2, w2, sonst)"),
+        ("Summen und Produkte", "sum(i, 1, 5, i^2) = Σ · prod(i, 1, 4, i) = Π"),
+        ("Listen und Definitionen", "notes = [0, 3, 7] · notes[1] (ab 0 gezählt) · len(notes) · f(k) = 2^(k/12)"),
         ("Winkel", "Trigonometrie arbeitet in Radiant"),
         ("mod(a,b)", "a − b·floor(a/b), nur für b > 0 definiert"),
         ("Dezimalzahlen", "mit Punkt: 0.5 (Komma trennt Argumente)")
@@ -182,6 +204,14 @@ struct FormulaSyntaxReference: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             DemonSectionHeader(title: "Formelsyntax", systemImage: "function")
+            Button {
+                model.requestedTab = .guides
+            } label: {
+                Label("Alle Zeichen, Funktionen und Beispiele in den Anleitungen", systemImage: "book.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DemonChipButtonStyle(tint: DemonTheme.neonGreen))
+            .accessibilityIdentifier("openGuidesFromSettings")
             ForEach(rows.indices, id: \.self) { index in
                 let row = rows[index]
                 VStack(alignment: .leading, spacing: 2) {

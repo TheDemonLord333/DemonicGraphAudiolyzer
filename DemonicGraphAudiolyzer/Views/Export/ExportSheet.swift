@@ -37,7 +37,7 @@ struct ExportSheet: View {
         .onAppear {
             if exportModel == nil {
                 exportModel = ExportModel(options: .defaults(), fileName: suggestedFileName,
-                                          duration: model.settings.duration)
+                                          duration: model.isSynthMode ? model.project.duration : model.settings.duration)
             }
         }
         .onDisappear {
@@ -46,6 +46,9 @@ struct ExportSheet: View {
     }
 
     private var suggestedFileName: String {
+        if model.isSynthMode {
+            return ExportFileName.sanitized("Demonic Graph – \(model.presetTitle)")
+        }
         let body = model.formulaDisplayBody
         return ExportFileName.sanitized("Demonic Graph – \(body)")
     }
@@ -155,14 +158,21 @@ private struct ExportForm: View {
     private var durationSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             DemonSectionHeader(title: "Dauer", systemImage: "timer")
-            DemonSlider(title: "Länge des Durchlaufs", value: $exportModel.duration, range: SoundSettings.durationRange, step: 0.5,
-                        format: { NumberText.seconds($0) })
-                .accessibilityIdentifier("exportDuration")
+            if model.isSynthMode {
+                Text("Länge des Projekts: \(NumberText.seconds(model.project.duration))")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(DemonTheme.textPrimary)
+                    .accessibilityIdentifier("exportDuration")
+            } else {
+                DemonSlider(title: "Länge des Durchlaufs", value: $exportModel.duration, range: SoundSettings.durationRange, step: 0.5,
+                            format: { NumberText.seconds($0) })
+                    .accessibilityIdentifier("exportDuration")
+            }
             Text(durationExplanation)
                 .font(.caption)
                 .foregroundStyle(DemonTheme.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
-            Text("Geschätzte Größe: \(ByteCountFormatter.string(fromByteCount: Int64(exportModel.options.estimatedSize(duration: exportModel.duration)), countStyle: .file))")
+            Text("Geschätzte Größe: \(ByteCountFormatter.string(fromByteCount: Int64(exportModel.options.estimatedSize(duration: model.isSynthMode ? model.project.duration : exportModel.duration)), countStyle: .file))")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(DemonTheme.textSecondary)
         }
@@ -178,6 +188,9 @@ private struct ExportForm: View {
             range = "von x = \(NumberText.compact(settings.playXMin)) bis x = \(NumberText.compact(settings.playXMax))"
         case .waveform:
             range = "der Klangwelle mit \(NumberText.frequency(settings.baseFrequency))"
+        case .synthesizer, .pendulum:
+            let tempo = model.project.tempo
+            return "Exportiert wird der vollständige Stereo-Mix aller hörbaren Stimmen: \(tempo.bars) Takte à \(tempo.beatsPerBar) Beats bei \(NumberText.decimal(tempo.bpm, fractionDigits: 0)) BPM – mit denselben Ereignissen, Parametern, Hüllkurven, Rauschwerten und Pegeln wie die Vorschau. Die Länge folgt aus Tempo und Takten."
         }
         return "Exportiert wird ein vollständiger Durchlauf \(range) mit allen aktuellen Klangeinstellungen. Eine aktivierte Wiederholung erzeugt keinen endlosen Export."
     }
@@ -325,11 +338,11 @@ private struct ExportForm: View {
     }
 
     private func startExport() {
-        guard let configuration = model.makeRenderConfiguration(sampleRate: exportModel.options.sampleRate) else { return }
+        guard let job = model.makeRenderJob(sampleRate: exportModel.options.sampleRate) else { return }
         guard model.beginExport() else { return }
         saveMessage = nil
         let audiolyzer = model
-        exportModel.start(configuration: configuration) {
+        exportModel.start(job: job) {
             audiolyzer.endExport()
         }
     }

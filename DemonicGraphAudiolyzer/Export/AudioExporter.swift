@@ -45,16 +45,25 @@ enum AudioExporter {
             .appendingPathComponent("Exports", isDirectory: true)
     }
 
-    /// Synchronous export; call from a background task. Checks `Task.isCancelled` between chunks.
-    /// - Parameter progress: called with values 0 … 1 (from the calling thread).
+    /// Synchronous export of a classic configuration (see `export(job:…)`).
     static func export(configuration: RenderConfiguration, options: ExportOptions, fileName: String,
                        directory: URL = AudioExporter.exportsDirectory,
                        progress: (Double) -> Void) throws -> ExportResult {
-        let configuration = configuration.withSampleRate(options.sampleRate)
-        let plan: SoundPlan
+        try export(job: .classic(configuration), options: options, fileName: fileName, directory: directory, progress: progress)
+    }
+
+    /// Synchronous export; call from a background task. Checks `Task.isCancelled` between chunks.
+    /// Uses the same render core as the preview (`JobRenderer`): identical events, parameters,
+    /// envelopes, effects and level.
+    /// - Parameter progress: called with values 0 … 1 (from the calling thread).
+    static func export(job: RenderJob, options: ExportOptions, fileName: String,
+                       directory: URL = AudioExporter.exportsDirectory,
+                       progress: (Double) -> Void) throws -> ExportResult {
+        let job = job.withSampleRate(options.sampleRate)
+        let plan: ActivePlan
         do {
-            plan = try SoundPlan(configuration: configuration)
-        } catch let error as SoundPlanError {
+            plan = try ActivePlan(job: job)
+        } catch let error as RenderJobError {
             throw ExportError.invalidConfiguration(error.message)
         }
 
@@ -73,19 +82,24 @@ enum AudioExporter {
         var encoder: AudioFileEncoding?
         do {
             encoder = try AudioFileEncoderFactory.make(for: options, url: partialURL, maximumChunk: chunkFrames)
-            let renderer = PCMRenderer(plan: plan)
-            var mono = [Float](repeating: 0, count: chunkFrames)
+            let renderer = JobRenderer(plan: plan)
+            var left = [Float](repeating: 0, count: chunkFrames)
+            var right = [Float](repeating: 0, count: chunkFrames)
             var lastReported = -1.0
             progress(0)
             while !renderer.isFinished {
                 if Task.isCancelled {
                     throw ExportError.cancelled
                 }
-                let written = mono.withUnsafeMutableBufferPointer { buffer in
-                    renderer.render(into: buffer.baseAddress!, capacity: chunkFrames)
+                let written = left.withUnsafeMutableBufferPointer { l in
+                    right.withUnsafeMutableBufferPointer { r in
+                        renderer.render(left: l.baseAddress!, right: r.baseAddress!, capacity: chunkFrames)
+                    }
                 }
-                try mono.withUnsafeBufferPointer { buffer in
-                    try encoder?.write(mono: buffer.baseAddress!, frameCount: written)
+                try left.withUnsafeBufferPointer { l in
+                    try right.withUnsafeBufferPointer { r in
+                        try encoder?.write(left: l.baseAddress!, right: r.baseAddress!, frameCount: written)
+                    }
                 }
                 let fraction = Double(renderer.position) / Double(renderer.totalFrames)
                 if fraction - lastReported >= 0.005 || renderer.isFinished {

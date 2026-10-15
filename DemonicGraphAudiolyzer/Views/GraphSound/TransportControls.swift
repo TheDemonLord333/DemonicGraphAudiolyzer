@@ -33,7 +33,7 @@ struct TransportControls: View {
     private var canPlay: Bool {
         switch model.phase {
         case .invalidFormula, .preparing, .exporting: return false
-        default: return model.parsedFormula != nil
+        default: return model.isSynthMode ? model.compilation != nil : model.parsedFormula != nil
         }
     }
 
@@ -51,15 +51,15 @@ struct TransportControls: View {
                         .foregroundStyle(DemonTheme.neonGreen)
                         .shadow(color: DemonTheme.neonGreen.opacity(0.9), radius: 6)
                 }
-                Text(isPreparing ? "Wird vorbereitet …" : (compact ? "Abspielen" : "Graph abspielen"))
+                Text(isPreparing ? "Wird vorbereitet …" : (compact || model.isSynthMode ? "Abspielen" : "Graph abspielen"))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             }
         }
         .buttonStyle(DemonPrimaryButtonStyle(horizontalPadding: compact ? 20 : 36))
         .disabled(!canPlay)
-        .accessibilityLabel("Graph abspielen")
-        .accessibilityHint(model.phase == .playing ? "Startet den Durchlauf von vorne" : "Spielt den Graphen als Klang ab")
+        .accessibilityLabel(model.isSynthMode ? "Abspielen" : "Graph abspielen")
+        .accessibilityHint(model.phase == .playing ? "Startet den Durchlauf von vorne" : (model.isSynthMode ? "Spielt alle hörbaren Stimmen ab" : "Spielt den Graphen als Klang ab"))
         .accessibilityIdentifier("playButton")
     }
 

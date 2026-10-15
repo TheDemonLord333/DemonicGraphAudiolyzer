@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Mode selection with mode specific settings (timbre or waveform section).
+/// Mode specific settings of the classic modes (timbre or waveform section).
 struct SoundModeCard: View {
     @Environment(AudiolyzerModel.self) private var model
     var appearance: GraphAppearance
@@ -8,10 +8,7 @@ struct SoundModeCard: View {
     var body: some View {
         @Bindable var model = model
         VStack(alignment: .leading, spacing: 14) {
-            DemonSectionHeader(title: "Klangmodus", systemImage: "waveform")
-            DemonSegmentedPicker(title: "Klangmodus", selection: $model.settings.mode,
-                                 options: SoundMode.allCases.map { (value: $0, title: $0.title) })
-                .accessibilityIdentifier("modePicker")
+            DemonSectionHeader(title: model.settings.mode.title, systemImage: model.settings.mode.icon)
             Text(model.settings.mode.explanation)
                 .font(.footnote)
                 .foregroundStyle(DemonTheme.textSecondary)
@@ -31,9 +28,59 @@ struct SoundModeCard: View {
                 }
             case .waveform:
                 WaveformSettingsSection(appearance: appearance)
+            case .synthesizer, .pendulum:
+                EmptyView()
             }
         }
         .demonCard()
+    }
+}
+
+/// The four modes of "Graph & Klang".
+struct ModePicker: View {
+    @Environment(AudiolyzerModel.self) private var model
+    var compact = false
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(SoundMode.allCases) { mode in
+                let isSelected = model.settings.mode == mode
+                Button {
+                    model.setMode(mode)
+                } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: mode.icon)
+                            .font(.system(size: compact ? 15 : 17, weight: .semibold))
+                        Text(mode.shortTitle)
+                            .font(.caption.weight(isSelected ? .heavy : .semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+                    .foregroundStyle(isSelected ? DemonTheme.greenCore : DemonTheme.textSecondary)
+                    .frame(maxWidth: .infinity, minHeight: compact ? 46 : 54)
+                    .background {
+                        if isSelected {
+                            ZStack {
+                                DemonRuneShape().fill(DemonTheme.green.opacity(0.22))
+                                DemonRuneShape().stroke(DemonTheme.green, lineWidth: 1.4)
+                            }
+                            .shadow(color: DemonTheme.green.opacity(0.45), radius: 6)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(mode.title)
+                .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+                .accessibilityIdentifier("mode-\(mode.rawValue)")
+            }
+        }
+        .padding(4)
+        .background(DemonPanelShape(cornerCut: 12, spike: 4).fill(DemonTheme.cardFill))
+        .overlay(DemonPanelShape(cornerCut: 12, spike: 4).stroke(DemonTheme.metalStroke, lineWidth: 1.2))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Modus")
+        .accessibilityIdentifier("modePicker")
     }
 }
 
@@ -388,7 +435,9 @@ struct ExportEntryCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             DemonSectionHeader(title: "Audioexport", systemImage: "square.and.arrow.up")
-            Text("Exportiert genau den erzeugten Klang als MP3, WAV oder M4A – ohne Mikrofon, ohne Systemaufnahme.")
+            Text(model.isSynthMode
+                 ? "Exportiert den vollständigen Mehrstimmen-Mix in Stereo – gleiche Ereignisse, Parameter, Hüllkurven und Pegel wie die Vorschau."
+                 : "Exportiert genau den erzeugten Klang als MP3, WAV oder M4A – ohne Mikrofon, ohne Systemaufnahme.")
                 .font(.footnote)
                 .foregroundStyle(DemonTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -397,7 +446,7 @@ struct ExportEntryCard: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(DemonChipButtonStyle(tint: DemonTheme.neonGreen))
-            .disabled(model.parsedFormula == nil || model.phase == .exporting)
+            .disabled(!model.canExport || model.phase == .exporting)
             .accessibilityIdentifier("exportButton")
         }
         .demonCard()

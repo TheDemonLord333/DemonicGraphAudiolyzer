@@ -1,30 +1,6 @@
 import SwiftUI
 
-enum AppTab: String, CaseIterable, Identifiable {
-    case graph
-    case presets
-    case settings
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .graph: return "Graph & Klang"
-        case .presets: return "Presets"
-        case .settings: return "Einstellungen"
-        }
-    }
-
-    var icon: String {
-        switch self {
-        case .graph: return "waveform.path.ecg"
-        case .presets: return "square.stack.3d.up.fill"
-        case .settings: return "gearshape.fill"
-        }
-    }
-}
-
-/// Root: dark background, the three main areas and the custom demonic tab bar.
+/// Root: dark background, the four main areas and the custom demonic tab bar.
 struct RootView: View {
     @Environment(AudiolyzerModel.self) private var model
     @Environment(\.scenePhase) private var scenePhase
@@ -44,6 +20,8 @@ struct RootView: View {
                     GraphSoundView()
                 case .presets:
                     PresetsView(onLoad: { selectedTab.wrappedValue = .graph })
+                case .guides:
+                    GuidesView()
                 case .settings:
                     SettingsView()
                 }
@@ -63,6 +41,12 @@ struct RootView: View {
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .onChange(of: scenePhase) { _, phase in
             model.handleScenePhase(phase)
+        }
+        .onChange(of: model.requestedTab) { _, tab in
+            // Help buttons open "Anleitungen", "Im Editor öffnen" returns to "Graph & Klang".
+            guard let tab else { return }
+            selectedTab.wrappedValue = tab
+            model.requestedTab = nil
         }
     }
 }
