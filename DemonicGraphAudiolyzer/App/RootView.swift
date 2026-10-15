@@ -1,29 +1,5 @@
 import SwiftUI
 
-enum AppTab: String, CaseIterable, Identifiable {
-    case graph
-    case presets
-    case settings
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .graph: return "Graph & Klang"
-        case .presets: return "Presets"
-        case .settings: return "Einstellungen"
-        }
-    }
-
-    var icon: String {
-        switch self {
-        case .graph: return "waveform.path.ecg"
-        case .presets: return "square.stack.3d.up.fill"
-        case .settings: return "gearshape.fill"
-        }
-    }
-}
-
 /// Root: dark background, the three main areas and the custom demonic tab bar.
 struct RootView: View {
     @Environment(AudiolyzerModel.self) private var model
