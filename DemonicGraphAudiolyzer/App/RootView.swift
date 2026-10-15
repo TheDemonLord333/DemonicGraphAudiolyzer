@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Root: dark background, the three main areas and the custom demonic tab bar.
+/// Root: dark background, the four main areas and the custom demonic tab bar.
 struct RootView: View {
     @Environment(AudiolyzerModel.self) private var model
     @Environment(\.scenePhase) private var scenePhase
@@ -20,6 +20,8 @@ struct RootView: View {
                     GraphSoundView()
                 case .presets:
                     PresetsView(onLoad: { selectedTab.wrappedValue = .graph })
+                case .guides:
+                    GuidesView()
                 case .settings:
                     SettingsView()
                 }
@@ -39,6 +41,12 @@ struct RootView: View {
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .onChange(of: scenePhase) { _, phase in
             model.handleScenePhase(phase)
+        }
+        .onChange(of: model.requestedTab) { _, tab in
+            // Help buttons open "Anleitungen", "Im Editor öffnen" returns to "Graph & Klang".
+            guard let tab else { return }
+            selectedTab.wrappedValue = tab
+            model.requestedTab = nil
         }
     }
 }
