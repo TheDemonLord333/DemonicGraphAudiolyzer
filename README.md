@@ -305,24 +305,24 @@ Der letzte Arbeitszustand (Formel, Parameter, Einstellungen, Synthesizer- und Pe
 
 **UI-Tests** (`DemonicGraphAudiolyzerUITests`, XCTest): Formel eingeben → Graph anzeigen → abspielen → pausieren → stoppen; ungültige Formel; Querformat; Presets/Einstellungen erreichbar; Synthesizer- und Pendel-Modus wählen, abspielen, stoppen, Stimmeneditor; Anleitungen durchsuchen, Σ-Eintrag öffnen, Beispiel im Editor öffnen; Start-Screenshot.
 
-**Tatsächlich ausgeführt**
+**Tatsächlich ausgeführt** (Stand des letzten Commits dieses Branches)
 
 *In der Entwicklungsumgebung (Linux, ohne Xcode):*
 
-* Swift 6.1 (offizielle Ubuntu-Pakete): Kernmodul + plattformunabhängige Tests → **57 Tests bestanden** (Parser, Abtastung, Klang/PCM, Transport, WAV, Sitzungszustand, Projekt-/Icon-Prüfung).
-* `swift test` für `Packages/LameKit` → **5 Tests bestanden**; erzeugtes MP3 mit `ffprobe`/`ffmpeg` geprüft (MPEG-1 Layer III, 192 kbit/s, exakt 2,000 s dank Info-Tag, 440 Hz).
-* Gerenderte Presets spektral analysiert: keine Aliasing-Anteile (< 10⁻⁵ der Energie außerhalb der Harmonischen), keine Knackser an Definitionslücken; 10 s Audio werden in ca. 30 ms erzeugt (Release-Build, x86-64).
-* `project.pbxproj` maschinell geparst (Paketreferenz, Bundle-IDs, Deployment Target); LAME-Quellen per `verify-lame-sources.sh` gegen das Original verifiziert.
+* Swift 6.1 (Ubuntu): Kernmodul + plattformunabhängige Tests → **121 Tests bestanden** (Formelsprache, Editor-Logik, Abtastung, klassischer Klang/PCM, musikalische Zeit, Trigger und Sequencer, Synthesizer-Renderer und alle Presets, Mehrspur-Graph, Anleitungen, Transport, WAV, Sitzungszustand, Projekt-/Icon-Prüfung).
+* Stack-Messung im Debug-Build mit Threads fester Stackgröße: die ungünstigsten zulässigen Formeln (63 verschachtelte Klammern bzw. `sin(`-Aufrufe, Ketten mit 150 Gliedern, 31 ineinander eingesetzte Hilfsfunktionen, 78 verkettete Definitionen) brauchen höchstens 320 KB; vor der Korrektur waren es bis zu 1,5 MB (Absturz des Test-Hosts im Simulator).
+* `swift test` für `Packages/LameKit` → **5 Tests bestanden**; MP3 mit `ffprobe`/`ffmpeg` geprüft (MPEG-1 Layer III, 192 kbit/s, exakt 2,000 s dank Info-Tag, 440 Hz).
+* Gerenderte Presets spektral analysiert (keine Aliasing-Anteile, keine Knackser); `project.pbxproj` maschinell geprüft; LAME-Quellen per `verify-lame-sources.sh` gegen das Original verifiziert.
 
-*Auf macOS mit Xcode 26 (GitHub Actions, Workflow `.github/workflows/ios.yml`, Runner `macos-26`, Simulator „iPhone Air“, iOS 26.5):*
+*Auf macOS mit Xcode 26.6 (GitHub Actions, Workflow `.github/workflows/ios.yml`, Runner `macos-26`, Simulator „iPhone Air“):*
 
-* `swift test` für LameKit auf macOS → bestanden.
-* **Release-Build für iPhone** (`generic/platform=iOS`, arm64, ohne Signierung) → **BUILD SUCCEEDED**.
-* **Unit-Tests im Simulator: alle bestanden** (Swift Testing, 10 Suites), u. a. echte AAC-/MP3-/WAV-Exporte mit AVFoundation-Dekodierung, 120-s-Export ohne blockierten Main Actor, Vorschau = Export bitgenau, SwiftData-Neustart, Wiedergabe mit echter AVAudioEngine (Pause hält die Audiouhr an, Fortsetzen, Ende, Wiederholung).
-* **UI-Tests im Simulator: alle bestanden** – Formel eingeben → Graph anzeigen → abspielen → pausieren → stoppen, ungültige Formel, Querformat inkl. Vollbild, Presets/Einstellungen/Exportdialog, Start-Screenshots in allen UI-Konfigurationen.
-* Screenshots aller Hauptansichten (Hoch- und Querformat, Wiedergabe, Pause, Formelfehler, Presets, Einstellungen, Export, Mathe-Tastatur) wurden aus dem Testlauf ausgewertet; sie liegen als Artefakt `ui-screenshots` am jeweiligen Workflow-Lauf.
+* `swift test` für LameKit auf macOS → 5 Tests bestanden.
+* **Release-Build für iPhone** (`generic/platform=iOS`, arm64, ohne Signierung) → **BUILD SUCCEEDED**, ohne Swift-Warnungen.
+* **Unit-Tests im Simulator: 135 Tests in 16 Suites bestanden** (Swift Testing), u. a. echte AAC-/MP3-/WAV-Exporte mit AVFoundation-Dekodierung, Vorschau = Export, SwiftData-Neustart und Migration V1 → V2, Wiedergabe mit echter AVAudioEngine, Synthesizer-Renderer, alle Presets, Anleitungen und der 512-KB-Stack-Test.
+* **UI-Tests im Simulator: 10 Tests bestanden** – Formel eingeben → Graph → abspielen → pausieren → stoppen; ungültige Formel; Querformat inkl. Vollbild; Presets/Einstellungen/Exportdialog; Formel-Synthesizer wählen, abspielen, stoppen, Stimmeneditor (Tonhöhe) öffnen; Pendel-Modus mit Pendelansicht; Anleitungen durchsuchen („Summe“), Σ-Eintrag mit Diagramm, Beispiel im Editor öffnen; Start-Screenshots in vier Konfigurationen.
+* Screenshots der UI-Tests liegen als Artefakt `ui-screenshots` am Workflow-Lauf. Die Screenshots der neuen Synthesizer-, Pendel- und Anleitungsansichten wurden in dieser Umgebung nicht ausgewertet (Artefakt-Downloads sind hier nicht erreichbar) – eine optische Prüfung steht noch aus.
 
-*Noch auf einem echten iPhone selbst zu prüfen* (hier nicht möglich): Signierung mit dem eigenen Team und Installation, Homescreen-Icon auf dem Gerät, Klang über Lautsprecher/Kopfhörer/Bluetooth (Latenzausgleich), Kopfhörer-Abziehen und Anrufe, „In Dateien sichern“ und Teilen mit echten Ziel-Apps, Bedienung mit VoiceOver und sehr großen Schriftgrößen, Leistung auf älteren Geräten.
+*Noch auf einem echten iPhone selbst zu prüfen* (hier nicht möglich): Signierung mit dem eigenen Team und Installation, Homescreen-Icon auf dem Gerät, Klang über Lautsprecher/Kopfhörer/Bluetooth (Latenzausgleich), Stereo-Panorama und Pegel der Synthesizer-Presets im Gehör, Kopfhörer-Abziehen und Anrufe, „In Dateien sichern“ und Teilen mit echten Ziel-Apps, Bedienung mit VoiceOver und sehr großen Schriftgrößen, Leistung (Vorberechnung langer Synthesizer-Projekte bis 120 s) auf älteren Geräten, Optik der neuen Ansichten im Hoch- und Querformat.
 
 ### Build-Status
 
