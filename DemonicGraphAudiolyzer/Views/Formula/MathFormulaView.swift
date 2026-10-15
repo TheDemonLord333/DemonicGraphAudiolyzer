@@ -165,8 +165,19 @@ struct MathProgramView: View {
     var activeCase: Int?
 
     var body: some View {
+        if MathLayout.canDisplay(program) {
+            typeset
+        } else {
+            Text("Zu tief verschachtelt für die mathematische Darstellung (mehr als \(MathLayout.maximumDisplayHeight) Ebenen).")
+                .font(.caption)
+                .foregroundStyle(DemonTheme.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var typeset: some View {
         let lines = MathLayout.lines(of: program, outputLabel: outputLabel)
-        ScrollView(.horizontal, showsIndicators: false) {
+        return ScrollView(.horizontal, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 10) {
                 ForEach(lines.indices, id: \.self) { index in
                     let line = lines[index]

@@ -130,4 +130,36 @@ struct SyntaxProgram: Equatable, Sendable {
     var definitions: [SyntaxStatement] {
         statements.filter { $0.kind != .output }
     }
+
+    /// Height of the tallest statement (computed without recursion).
+    var height: Int {
+        statements.map(\.expression.height).max() ?? 0
+    }
+}
+
+extension SyntaxExpression {
+    /// Direct sub-expressions.
+    var children: [SyntaxExpression] {
+        switch self {
+        case .number, .name: return []
+        case .negate(let operand, _), .not(let operand, _), .group(let operand, _): return [operand]
+        case .binary(_, let lhs, let rhs, _, _): return [lhs, rhs]
+        case .call(_, _, let arguments, _): return arguments
+        case .list(let elements, _): return elements
+        case .index(let base, let index, _): return [base, index]
+        }
+    }
+
+    /// Height of the expression tree, computed without recursion (safe for any input).
+    var height: Int {
+        var maximum = 0
+        var stack: [(expression: SyntaxExpression, level: Int)] = [(self, 1)]
+        while let (expression, level) = stack.popLast() {
+            maximum = Swift.max(maximum, level)
+            for child in expression.children {
+                stack.append((child, level + 1))
+            }
+        }
+        return maximum
+    }
 }

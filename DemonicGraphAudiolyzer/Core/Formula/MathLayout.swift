@@ -110,6 +110,14 @@ enum MathLayout {
     ]
 
     /// Lines of a program, output last.
+    /// Taller programs are not typeset: the layout and the nested SwiftUI views recurse once
+    /// per level (the main thread of iOS has 1 MB of stack).
+    static let maximumDisplayHeight = 40
+
+    static func canDisplay(_ program: SyntaxProgram) -> Bool {
+        program.height <= maximumDisplayHeight
+    }
+
     static func lines(of program: SyntaxProgram, outputLabel: String = "y") -> [MathLine] {
         var result: [MathLine] = []
         let output = program.outputStatement

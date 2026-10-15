@@ -138,4 +138,34 @@ struct FormulaEditingTests {
         #expect(!product.variableIsValid)
         #expect(FormulaTextTools.splitArguments("a, (b, c), [d, e]") == ["a", "(b, c)", "[d, e]"])
     }
+
+    @Test("Alle Preset-Formeln und Anleitungsbeispiele werden mathematisch dargestellt; zu tiefe Formeln nicht")
+    func displayHeightLimit() {
+        var texts: [(String, FormulaContext)] = []
+        for preset in BuiltInPresets.all {
+            if let project = preset.project {
+                for voice in project.voices {
+                    texts.append((voice.pitch.formula, .synth))
+                    texts.append((voice.amplitude.formula, .synth))
+                    if voice.source.kind.usesSignalFormula { texts.append((voice.source.signalFormula, .synth)) }
+                }
+            } else {
+                texts.append((preset.formula, .classic))
+            }
+        }
+        for entry in GuideCatalog.entries {
+            for example in entry.examples { texts.append((example.input, .synth)) }
+        }
+        for (text, context) in texts {
+            guard let program = FormulaDisplay.program(text, context: context, requiresOutput: false) else { continue }
+            #expect(MathLayout.canDisplay(program), "\(text)")
+        }
+        let tall = String(repeating: "(", count: 45) + "x" + String(repeating: ")", count: 45)
+        if let program = FormulaDisplay.program(tall, context: .classic) {
+            #expect(!MathLayout.canDisplay(program))
+            #expect(program.height > MathLayout.maximumDisplayHeight)
+        }
+        #expect(SyntaxExpression.number(1, SourceRange(start: 0, end: 1)).height == 1)
+    }
 }
+
